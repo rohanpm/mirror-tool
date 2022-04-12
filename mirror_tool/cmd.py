@@ -86,5 +86,5 @@ class MirrorTool:
         p.func()
 
 
-if __name__ == '__main__':
+def entrypoint():
     MirrorTool().run(sys.argv[1:])
