@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import yaml
 import argparse
 import sys
 import subprocess
 from typing import List
 from dataclasses import dataclass
 import logging
+
+from ruamel.yaml import YAML
 
 LOG = logging.getLogger('mirror-tool')
 
@@ -30,7 +31,7 @@ class Config:
     @classmethod
     def from_file(cls, filename='project.yaml') -> 'Config':
         with open(filename, 'rt') as f:
-            raw = yaml.safe_load(f)
+            raw = YAML(typ='safe').load(f)
         return cls(raw)
 
 
