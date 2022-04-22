@@ -3,6 +3,7 @@ import argparse
 import sys
 import subprocess
 import logging
+import os
 from typing import Optional
 
 from jsonschema.exceptions import ValidationError
@@ -73,7 +74,10 @@ class MirrorTool:
                 "refs/mirror-tool/to-merge",
             ]
         )
-        self.run_cmd(["git", "rm", "-rf", f"{mirror.dir}/"], check=False)
+
+        if os.path.exists(mirror.dir):
+            self.run_cmd(["git", "rm", "--quiet", "-rf", f"{mirror.dir}/"], check=False)
+
         self.run_cmd(
             [
                 "git",
