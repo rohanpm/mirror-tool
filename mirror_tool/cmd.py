@@ -7,7 +7,10 @@ import os
 from typing import Optional
 
 from jsonschema.exceptions import ValidationError
+
+
 from .conf import Config, Mirror
+from .gitlab import GitlabSession
 
 LOG = logging.getLogger("mirror-tool")
 
@@ -41,6 +44,18 @@ class MirrorTool:
         )
         update_local.set_defaults(func=self.update_local)
 
+        update = subparsers.add_parser(
+            "update",
+            help=(
+                "Create a commit locally updating all mirrors and "
+                "push to enabled remote target(s)"
+            ),
+        )
+        update.set_defaults(func=self.update)
+
+        # TODO: a command to close outstanding PR if any.
+        # TODO: a command to generate gitlab pipeline config?
+
         return parser
 
     @property
@@ -49,8 +64,9 @@ class MirrorTool:
             self._config = Config.from_file(self.args.conf)
         return self._config
 
-    def run_cmd(self, args, check=True):
-        LOG.info("+ %s" % " ".join(args))
+    def run_cmd(self, args, check=True, silent=False):
+        if not silent:
+            LOG.info("+ %s" % " ".join(args))
         subprocess.run(args, check=check)
 
     def update_local_mirror(self, mirror: Mirror):
@@ -99,6 +115,18 @@ class MirrorTool:
 
         for mirror in cfg.mirrors:
             self.update_local_mirror(mirror)
+
+        LOG.info("Mirror(s) locally updated.")
+
+    def update(self):
+        self.update_local()
+
+        if not self.config.gitlab_merge.enabled:
+            LOG.info("No remote target(s) are enabled for update.")
+            return
+
+        gitlab = GitlabSession(self.config.gitlab_merge, run_cmd=self.run_cmd)
+        gitlab.ensure_merge_request_exists()
 
     def validate_config(self):
         try:
