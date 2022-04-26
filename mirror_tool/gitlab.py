@@ -31,16 +31,6 @@ class GitlabSession:
         self.requests.headers["PRIVATE-TOKEN"] = self.gitlab_merge.token_final
 
         self.run_cmd = run_cmd
-        # GITLAB_MIRROR_TOKEN=[MASKED]
-        # CI_API_V4_URL=https://gitlab.cee.redhat.com/api/v4
-        # CI_JOB_URL=https://gitlab.cee.redhat.com/rmcgover/c3i-test/-/jobs/6366493
-        # CI_PIPELINE_URL=https://gitlab.cee.redhat.com/rmcgover/c3i-test/-/pipelines/1893705
-
-        # CI_PROJECT_ID=57572
-        # CI_PROJECT_NAME=c3i-test
-        # CI_PROJECT_NAMESPACE=rmcgover
-        # CI_PROJECT_URL=https://gitlab.cee.redhat.com/rmcgover/c3i-test
-        # CI_SERVER_URL=https://gitlab.cee.redhat.com
 
     @property
     def project_mrs_url(self):
