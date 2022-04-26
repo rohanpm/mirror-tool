@@ -1,0 +1,16 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal@sha256:b37d34ffce0e59879c776da3f1b1c643674975e6588fe8e8adf60eef25b4a6ca
+
+RUN microdnf -y install python39
+
+# FIXME: pin a poetry version?
+RUN pip3 install poetry
+
+ADD . /src
+
+RUN mv /src/image/RH-IT-Root-CA.crt /etc/pki/ca-trust/source/anchors && update-ca-trust
+ENV REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
+
+RUN cd /src && poetry install --no-dev -n
+
+RUN ln -s /root/.cache/pypoetry/virtualenvs/mirror-tool*/bin/mirror-tool /usr/local/bin/mirror-tool
+ENTRYPOINT ["/usr/local/bin/mirror-tool"]
