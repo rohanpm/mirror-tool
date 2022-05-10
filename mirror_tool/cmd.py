@@ -11,6 +11,7 @@ from jsonschema.exceptions import ValidationError
 
 from .conf import Config, Mirror
 from .gitlab import GitlabSession
+from .git_config import environ_with_git_config
 
 LOG = logging.getLogger("mirror-tool")
 
@@ -53,6 +54,17 @@ class MirrorTool:
         )
         update.set_defaults(func=self.update)
 
+        for p in (update_local, update):
+            p.add_argument(
+                "--allow-empty",
+                action="store_true",
+                default=False,
+                help=(
+                    "Create an empty update commit even if there are no "
+                    "updates; primarily for testing purposes"
+                ),
+            )
+
         # TODO: a command to close outstanding PR if any.
         # TODO: a command to generate gitlab pipeline config?
 
@@ -64,13 +76,17 @@ class MirrorTool:
             self._config = Config.from_file(self.args.conf)
         return self._config
 
-    def run_cmd(self, args, check=True, silent=False):
+    def run_cmd(self, args, check=True, silent=False, env=None):
         if not silent:
             LOG.info("+ %s" % " ".join(args))
-        subprocess.run(args, check=check)
+        subprocess.run(args, check=check, env=env)
+
+    def run_git_cmd(self, *args, **kwargs):
+        kwargs["env"] = environ_with_git_config(self.config.git_config, os.environ)
+        return self.run_cmd(*args, **kwargs)
 
     def update_local_mirror(self, mirror: Mirror):
-        self.run_cmd(
+        self.run_git_cmd(
             ["git", "fetch", mirror.url, f"+{mirror.ref}:refs/mirror-tool/to-merge"]
         )
 
@@ -79,7 +95,7 @@ class MirrorTool:
         ).strip()
         now = subprocess.check_output(["date", "-Im", "-u"], text=True)
 
-        self.run_cmd(
+        self.run_git_cmd(
             [
                 "git",
                 "merge",
@@ -92,9 +108,11 @@ class MirrorTool:
         )
 
         if os.path.exists(mirror.dir):
-            self.run_cmd(["git", "rm", "--quiet", "-rf", f"{mirror.dir}/"], check=False)
+            self.run_git_cmd(
+                ["git", "rm", "--quiet", "-rf", f"{mirror.dir}/"], check=False
+            )
 
-        self.run_cmd(
+        self.run_git_cmd(
             [
                 "git",
                 "read-tree",
@@ -104,11 +122,14 @@ class MirrorTool:
             ]
         )
 
+        # TODO: git commit message from template?
+        commit_cmd = ["git", "commit", "-m", f"merge {mirror.dir} at {now}"]
+        if self.args.allow_empty:
+            commit_cmd.append("--allow-empty")
+
         # TODO: we tolerate failure here as meaning "there was nothing to change".
         # But we should really verify that's the reason we failed.
-        self.run_cmd(
-            ["git", "commit", "-m", f"merge {mirror.dir} at {now}"], check=False
-        )
+        self.run_git_cmd(commit_cmd, check=False)
 
     def update_local(self):
         cfg = self.config

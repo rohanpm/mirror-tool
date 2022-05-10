@@ -1,6 +1,6 @@
 import os
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 import jsonschema
 
@@ -67,28 +67,23 @@ CONFIG_SCHEMA = {
                 },
             },
             "additionalProperties": False,
-        }
-        # gitlab_merge:
-        #   enabled: true
-        #   src: latest
-        #   dest: qa
-        #   title: "Deploy to QA"
-        #   token: $GITLAB_MIRROR_TOKEN
-        #   labels:
-        #   - deploy
-        #   description: "implement me!"
-        #   comment:
-        #     create: "a comment added on creation"
-        #     update: "a comment added on update"
+        },
     },
     "type": "object",
     "properties": {
         "mirror": {"$ref": "#/definitions/mirrorList"},
         "gitlab_merge": {"$ref": "#/definitions/gitlabMerge"},
+        "git_config": {"type": "object"},
     },
     "required": [],
     "additionalProperties": False,
 }
+
+
+@dataclass
+class GitlabMergeComments:
+    create: str = ""
+    update: str = ""
 
 
 @dataclass
@@ -101,6 +96,10 @@ class GitlabMerge:
     # This MUST be '$ENV_VAR_NAME'
     token: str = "$GITLAB_MIRROR_TOKEN"
 
+    labels: List[str] = field(default_factory=list)
+    description: str = "Automated update of dependencies."
+    comment: GitlabMergeComments = GitlabMergeComments()
+
     # The defaults here assume that we are running from a gitlab CI pipeline.
     # Predefined vars are documented at:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
@@ -108,13 +107,6 @@ class GitlabMerge:
     project_id: int = int(os.environ.get("CI_PROJECT_ID") or "0")
 
     push_url: str = os.environ.get("CI_PROJECT_URL") or ""
-    # CI_PROJECT_URL=https://token:[TOKEN]@gitlab.cee.redhat.com/rmcgover/c3i-test
-
-    # CI_PROJECT_ID=57572
-    # CI_PROJECT_NAME=c3i-test
-    # CI_PROJECT_NAMESPACE=rmcgover
-    # CI_PROJECT_URL=https://gitlab.cee.redhat.com/rmcgover/c3i-test
-    # CI_SERVER_URL=https://gitlab.cee.redhat.com
 
     @property
     def token_final(self) -> str:
@@ -161,8 +153,14 @@ class Config:
 
     @property
     def gitlab_merge(self) -> GitlabMerge:
-        raw = self._raw.get("gitlab_merge") or {}
+        raw = (self._raw.get("gitlab_merge") or {}).copy()
+        raw_comment = raw.get("comment") or {}
+        raw["comment"] = GitlabMergeComments(**raw_comment)
         return GitlabMerge(**raw)
+
+    @property
+    def git_config(self) -> Dict[str, Any]:
+        return self._raw.get("git_config") or {}
 
     @property
     def mirrors(self) -> List[Mirror]:
