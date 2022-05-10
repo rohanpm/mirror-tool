@@ -67,24 +67,13 @@ CONFIG_SCHEMA = {
                 },
             },
             "additionalProperties": False,
-        }
-        # gitlab_merge:
-        #   enabled: true
-        #   src: latest
-        #   dest: qa
-        #   title: "Deploy to QA"
-        #   token: $GITLAB_MIRROR_TOKEN
-        #   labels:
-        #   - deploy
-        #   description: "implement me!"
-        #   comment:
-        #     create: "a comment added on creation"
-        #     update: "a comment added on update"
+        },
     },
     "type": "object",
     "properties": {
         "mirror": {"$ref": "#/definitions/mirrorList"},
         "gitlab_merge": {"$ref": "#/definitions/gitlabMerge"},
+        "git_config": {"type": "object"},
     },
     "required": [],
     "additionalProperties": False,
@@ -108,13 +97,6 @@ class GitlabMerge:
     project_id: int = int(os.environ.get("CI_PROJECT_ID") or "0")
 
     push_url: str = os.environ.get("CI_PROJECT_URL") or ""
-    # CI_PROJECT_URL=https://token:[TOKEN]@gitlab.cee.redhat.com/rmcgover/c3i-test
-
-    # CI_PROJECT_ID=57572
-    # CI_PROJECT_NAME=c3i-test
-    # CI_PROJECT_NAMESPACE=rmcgover
-    # CI_PROJECT_URL=https://gitlab.cee.redhat.com/rmcgover/c3i-test
-    # CI_SERVER_URL=https://gitlab.cee.redhat.com
 
     @property
     def token_final(self) -> str:
