@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict
 import os
+import datetime
 
 import requests
 import jinja2
@@ -47,8 +48,13 @@ class GitlabSession:
         self.jinja_args = self.make_jinja_args()
 
     def make_jinja_args(self):
+        now = datetime.datetime.utcnow()
         return dict(
             env=os.environ,
+            datetime_iso8601=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            datetime_minute=now.strftime("%Y-%m-%d %H:%M"),
+            datetime_day=now.strftime("%Y-%m-%d"),
+            datetime_week=now.strftime("%Ywk%U"),
         )
 
     def jinja_render(self, template_name, *args, **kwargs):
