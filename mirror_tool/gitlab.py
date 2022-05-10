@@ -1,6 +1,9 @@
 import logging
+from typing import Any, Dict
+import os
 
 import requests
+import jinja2
 
 from .conf import GitlabMerge
 
@@ -31,6 +34,26 @@ class GitlabSession:
         self.requests.headers["PRIVATE-TOKEN"] = self.gitlab_merge.token_final
 
         self.run_cmd = run_cmd
+
+        jinja_loader = jinja2.DictLoader(
+            {
+                "title": self.gitlab_merge.title,
+                "description": self.gitlab_merge.description,
+                "comment.create": self.gitlab_merge.comment.create,
+                "comment.update": self.gitlab_merge.comment.update,
+            }
+        )
+        self.jinja_env = jinja2.Environment(loader=jinja_loader)
+        self.jinja_args = self.make_jinja_args()
+
+    def make_jinja_args(self):
+        return dict(
+            env=os.environ,
+        )
+
+    def jinja_render(self, template_name, *args, **kwargs):
+        kwargs.update(self.jinja_args)
+        return self.jinja_env.get_template(template_name).render(*args, **kwargs)
 
     @property
     def project_mrs_url(self):
@@ -66,23 +89,26 @@ class GitlabSession:
             LOG.debug("Command failed", exc_info=True)
             raise GitlabException(f"Could not push to {self.gitlab_merge.src} branch.")
 
+    def mutable_mr_attributes(self) -> Dict[str, Any]:
+        return dict(
+            title=self.jinja_render("title"),
+            allow_collaboration=True,
+            squash=False,
+            labels=[SHARED_LABEL] + self.gitlab_merge.labels,
+            description=self.jinja_render("description"),
+        )
+
     def create_mr(self) -> bool:
         # https://docs.gitlab.com/ee/api/merge_requests.html#create-mr
         LOG.info("Creating GitLab merge request ...")
 
+        create_attrs = self.mutable_mr_attributes()
+        create_attrs["source_branch"] = self.gitlab_merge.src
+        create_attrs["target_branch"] = self.gitlab_merge.dest
+
         response = self.requests.post(
             self.project_mrs_url,
-            json=dict(
-                source_branch=self.gitlab_merge.src,
-                target_branch=self.gitlab_merge.dest,
-                title=self.gitlab_merge.title,
-                allow_collaboration=True,
-                squash=False,
-                labels=SHARED_LABEL,
-                # TODO: description
-                # TODO: labels
-                # TODO: make title & description support jinja
-            ),
+            json=create_attrs,
         )
 
         LOG.info("GitLab response: %s", response.status_code)
@@ -92,6 +118,7 @@ class GitlabSession:
             LOG.info(
                 "Created: %s", body.get("web_url") or "<unknown merge request URL>"
             )
+            self.add_comment(body, self.jinja_render("comment.create"))
             return True
 
         elif response.status_code == 409:
@@ -102,23 +129,30 @@ class GitlabSession:
     def update_mr(self, mr) -> None:
         url = "".join([self.project_mrs_url, "/", str(mr["iid"])])
 
-        response = self.requests.put(
-            url,
-            json=dict(
-                title=self.gitlab_merge.title,
-                allow_collaboration=True,
-                squash=False,
-                labels=SHARED_LABEL,
-                # TODO: description
-                # TODO: labels
-                # TODO: make title & description support jinja
-            ),
-        )
+        update_attrs = self.mutable_mr_attributes()
+
+        response = self.requests.put(url, json=update_attrs)
 
         if not response.ok:
             self.raise_bad_response("update merge request", response)
 
+        self.add_comment(mr, self.jinja_render("comment.update"))
+
         LOG.info("Updated: %s", mr.get("web_url") or "<unknown merge request URL>")
+
+    def add_comment(self, mr, body):
+        if not body:
+            return
+
+        # https://docs.gitlab.com/ee/api/notes.html#create-new-merge-request-note
+        iid = mr["iid"]
+        url = "".join([self.project_mrs_url, "/", str(iid), "/notes"])
+
+        response = self.requests.post(url, json=dict(body=body))
+        if not response.ok:
+            self.raise_bad_response("add comment", response)
+
+        LOG.info("Commented on: %s", mr.get("web_url") or "<unknown merge request URL>")
 
     def find_mr(self) -> dict:
         response = self.requests.get(
