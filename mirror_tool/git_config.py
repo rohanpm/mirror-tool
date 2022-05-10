@@ -13,5 +13,5 @@ def environ_with_git_config(
         out[f"GIT_CONFIG_VALUE_{count}"] = str(val)
         count += 1
 
-    out["GIT_CONFIG_COUNT"] = count
+    out["GIT_CONFIG_COUNT"] = str(count)
     return out

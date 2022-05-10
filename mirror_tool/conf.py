@@ -1,6 +1,6 @@
 import os
-from dataclasses import dataclass
-from typing import List
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 import jsonschema
 
@@ -81,6 +81,12 @@ CONFIG_SCHEMA = {
 
 
 @dataclass
+class GitlabMergeComments:
+    create: str = ""
+    update: str = ""
+
+
+@dataclass
 class GitlabMerge:
     enabled: bool = False
     src: str = "latest"
@@ -89,6 +95,10 @@ class GitlabMerge:
 
     # This MUST be '$ENV_VAR_NAME'
     token: str = "$GITLAB_MIRROR_TOKEN"
+
+    labels: List[str] = field(default_factory=list)
+    description: str = "Automated update of dependencies."
+    comment: GitlabMergeComments = GitlabMergeComments()
 
     # The defaults here assume that we are running from a gitlab CI pipeline.
     # Predefined vars are documented at:
@@ -143,8 +153,14 @@ class Config:
 
     @property
     def gitlab_merge(self) -> GitlabMerge:
-        raw = self._raw.get("gitlab_merge") or {}
+        raw = (self._raw.get("gitlab_merge") or {}).copy()
+        raw_comment = raw.get("comment") or {}
+        raw["comment"] = GitlabMergeComments(**raw_comment)
         return GitlabMerge(**raw)
+
+    @property
+    def git_config(self) -> Dict[str, Any]:
+        return self._raw.get("git_config") or {}
 
     @property
     def mirrors(self) -> List[Mirror]:
