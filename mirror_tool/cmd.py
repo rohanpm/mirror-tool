@@ -53,6 +53,17 @@ class MirrorTool:
         )
         update.set_defaults(func=self.update)
 
+        for p in (update_local, update):
+            p.add_argument(
+                "--allow-empty",
+                action="store_true",
+                default=False,
+                help=(
+                    "Create an empty update commit even if there are no "
+                    "updates; primarily for testing purposes"
+                ),
+            )
+
         # TODO: a command to close outstanding PR if any.
         # TODO: a command to generate gitlab pipeline config?
 
@@ -104,11 +115,14 @@ class MirrorTool:
             ]
         )
 
+        # TODO: git commit message from template?
+        commit_cmd = ["git", "commit", "-m", f"merge {mirror.dir} at {now}"]
+        if self.args.allow_empty:
+            commit_cmd.append("--allow-empty")
+
         # TODO: we tolerate failure here as meaning "there was nothing to change".
         # But we should really verify that's the reason we failed.
-        self.run_cmd(
-            ["git", "commit", "-m", f"merge {mirror.dir} at {now}"], check=False
-        )
+        self.run_cmd(commit_cmd, check=False)
 
     def update_local(self):
         cfg = self.config
