@@ -1,9 +1,7 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal@sha256:e83a3146aa8d34dccfb99097aa79a3914327942337890aa6f73911996a80ebb8
+FROM registry.fedoraproject.org/fedora-minimal@sha256:99e64668ef52d785f841d975d8653197e023e3509265514ee863f781bda5ba00
 
-RUN microdnf -y install python39 git-core
-
-# FIXME: pin a poetry version?
-RUN pip3 install poetry
+RUN microdnf -y upgrade
+RUN microdnf -y install python git-core /usr/bin/pip /usr/bin/poetry
 
 ADD . /src
 

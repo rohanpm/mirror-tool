@@ -9,7 +9,7 @@ license = "GPLv3"
 "mirror-tool" = "mirror_tool.cmd:entrypoint"
 
 [tool.poetry.dependencies]
-python = ">=3.9"
+python = ">=3.9,<4"
 "ruamel.yaml" = ">=0.17.21"
 jsonschema = ">=4.4.0"
 requests = ">=2.27.1"
