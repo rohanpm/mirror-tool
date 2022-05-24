@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 import argparse
-import sys
-import subprocess
 import logging
 import os
+import subprocess
+import sys
+from dataclasses import asdict
 from typing import Optional
 
+import jinja2
 from jsonschema.exceptions import ValidationError
 
-
 from .conf import Config, Mirror
-from .gitlab import GitlabSession
 from .git_config import environ_with_git_config
+from .git_info import UpdateInfo, get_update_info
+from .gitlab import GitlabSession
+from .jinja import jinja_args
 
 LOG = logging.getLogger("mirror-tool")
 
@@ -85,7 +88,13 @@ class MirrorTool:
         kwargs["env"] = environ_with_git_config(self.config.git_config, os.environ)
         return self.run_cmd(*args, **kwargs)
 
-    def update_local_mirror(self, mirror: Mirror):
+    def commitmsg_for_update(self, update: UpdateInfo) -> str:
+        jinja_env = jinja2.Environment(
+            loader=jinja2.DictLoader({"commitmsg": self.config.commitmsg})
+        )
+        return jinja_env.get_template("commitmsg").render(jinja_args(**asdict(update)))
+
+    def update_local_mirror(self, mirror: Mirror) -> UpdateInfo:
         self.run_git_cmd(
             ["git", "fetch", mirror.url, f"+{mirror.ref}:refs/mirror-tool/to-merge"]
         )
@@ -93,6 +102,7 @@ class MirrorTool:
         revision = subprocess.check_output(
             ["git", "rev-parse", "refs/mirror-tool/to-merge"], text=True
         ).strip()
+        update_info = get_update_info(rev_from="HEAD", rev_to=revision, mirror=mirror)
         now = subprocess.check_output(["date", "-Im", "-u"], text=True)
 
         self.run_git_cmd(
@@ -122,8 +132,8 @@ class MirrorTool:
             ]
         )
 
-        # TODO: git commit message from template?
-        commit_cmd = ["git", "commit", "-m", f"merge {mirror.dir} at {now}"]
+        commitmsg = self.commitmsg_for_update(update_info)
+        commit_cmd = ["git", "commit", "-m", commitmsg]
         if self.args.allow_empty:
             commit_cmd.append("--allow-empty")
 
@@ -131,22 +141,30 @@ class MirrorTool:
         # But we should really verify that's the reason we failed.
         self.run_git_cmd(commit_cmd, check=False)
 
-    def update_local(self):
+        return update_info
+
+    def update_local(self) -> list[UpdateInfo]:
         cfg = self.config
 
+        updates = []
+
         for mirror in cfg.mirrors:
-            self.update_local_mirror(mirror)
+            updates.append(self.update_local_mirror(mirror))
 
         LOG.info("Mirror(s) locally updated.")
 
+        return [u for u in updates if u.changed]
+
     def update(self):
-        self.update_local()
+        updates = self.update_local()
 
         if not self.config.gitlab_merge.enabled:
             LOG.info("No remote target(s) are enabled for update.")
             return
 
-        gitlab = GitlabSession(self.config.gitlab_merge, run_cmd=self.run_cmd)
+        gitlab = GitlabSession(
+            self.config.gitlab_merge, run_cmd=self.run_cmd, updates=updates
+        )
         gitlab.ensure_merge_request_exists()
 
     def validate_config(self):

@@ -1,12 +1,12 @@
 import logging
 from typing import Any, Dict
-import os
-import datetime
 
-import requests
 import jinja2
+import requests
 
 from .conf import GitlabMerge
+from .git_info import UpdateInfo
+from .jinja import jinja_args
 
 LOG = logging.getLogger("mirror-tool")
 SHARED_LABEL = "mirror-tool"
@@ -17,7 +17,7 @@ class GitlabException(RuntimeError):
 
 
 class GitlabSession:
-    def __init__(self, gitlab_merge: GitlabMerge, run_cmd):
+    def __init__(self, gitlab_merge: GitlabMerge, run_cmd, updates: list[UpdateInfo]):
         for field in ("api_v4_url", "project_id", "push_url"):
             if not getattr(gitlab_merge, field):
                 raise GitlabException(
@@ -44,18 +44,9 @@ class GitlabSession:
                 "comment.update": self.gitlab_merge.comment.update,
             }
         )
+        self.updates = updates
         self.jinja_env = jinja2.Environment(loader=jinja_loader)
-        self.jinja_args = self.make_jinja_args()
-
-    def make_jinja_args(self):
-        now = datetime.datetime.utcnow()
-        return dict(
-            env=os.environ,
-            datetime_iso8601=now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            datetime_minute=now.strftime("%Y-%m-%d %H:%M"),
-            datetime_day=now.strftime("%Y-%m-%d"),
-            datetime_week=now.strftime("%Ywk%U"),
-        )
+        self.jinja_args = jinja_args(updates=self.updates)
 
     def jinja_render(self, template_name, *args, **kwargs):
         kwargs.update(self.jinja_args)
