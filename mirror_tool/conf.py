@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List
 
 import jsonschema
-
 from ruamel.yaml import YAML
 
 CONFIG_SCHEMA = {
@@ -168,6 +167,13 @@ class Config:
         for elem in self._raw.get("mirror") or []:
             out.append(Mirror(**elem))
         return out
+
+    @property
+    def commitmsg(self) -> str:
+        return (
+            self._raw.get("commitmsg")
+            or "merging {{mirror.dir}} at {{datetime_minute}}"
+        )
 
     def validate(self) -> None:
         jsonschema.validate(self._raw, CONFIG_SCHEMA)
