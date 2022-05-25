@@ -107,10 +107,14 @@ class GitlabMerge:
     # The defaults here assume that we are running from a gitlab CI pipeline.
     # Predefined vars are documented at:
     # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
-    api_v4_url: str = os.environ.get("CI_API_V4_URL")
-    project_id: int = int(os.environ.get("CI_PROJECT_ID") or "0")
+    api_v4_url: str = field(default_factory=lambda: os.environ.get("CI_API_V4_URL"))
+    project_id: int = field(
+        default_factory=lambda: int(os.environ.get("CI_PROJECT_ID") or "0")
+    )
 
-    push_url: str = os.environ.get("CI_PROJECT_URL") or ""
+    push_url: str = field(
+        default_factory=lambda: os.environ.get("CI_PROJECT_URL") or ""
+    )
 
     @property
     def token_final(self) -> str:
