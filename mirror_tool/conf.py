@@ -73,6 +73,11 @@ CONFIG_SCHEMA = {
         "mirror": {"$ref": "#/definitions/mirrorList"},
         "gitlab_merge": {"$ref": "#/definitions/gitlabMerge"},
         "git_config": {"type": "object"},
+        "commitmsg": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8000,
+        },
     },
     "required": [],
     "additionalProperties": False,
