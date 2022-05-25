@@ -22,7 +22,10 @@ def run_git():
     return run
 
 
-def test_basic_update(tmpdir, monkeypatch, caplog, run_git):
+# If no target system is enabled, then update and update-local are just the
+# same thing, so test with both
+@pytest.mark.parametrize("subcommand", ["update", "update-local"])
+def test_basic_update(tmpdir, monkeypatch, caplog, run_git, subcommand):
     """mirror-tool can do basic local updates."""
 
     repo1 = tmpdir.join("repo1")
@@ -68,7 +71,7 @@ def test_basic_update(tmpdir, monkeypatch, caplog, run_git):
     # running from top level of superproject.
     monkeypatch.chdir(str(reposuper))
 
-    monkeypatch.setattr(sys, "argv", ["", "update-local", "--allow-empty"])
+    monkeypatch.setattr(sys, "argv", ["", subcommand, "--allow-empty"])
 
     # It should run OK
     entrypoint()
