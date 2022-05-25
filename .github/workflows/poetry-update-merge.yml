@@ -1,0 +1,24 @@
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Tuesday
+    - cron: "20 20 * * 2"
+
+name: "poetry: merge PR"
+jobs:
+  poetry_update_merge:
+    name: poetry update automerge
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look up pull request
+        uses: juliangruber/find-pull-request-action@v1
+        id: find-pull-request
+        with:
+          branch: deps/poetry-update
+      - name: Merge Pull Request
+        uses: juliangruber/merge-pull-request-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          number: ${{ steps.find-pull-request.outputs.number }}
+          method: merge
+        if: ${{ steps.find-pull-request.outputs.number }}
