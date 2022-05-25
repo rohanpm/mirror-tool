@@ -1,0 +1,51 @@
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Sunday
+    - cron: "20 20 * * 0"
+
+name: "poetry: create PR"
+jobs:
+  poetry_update:
+    name: poetry update
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: poetry update
+        uses: technote-space/create-pr-action@v2
+        with:
+          EXECUTE_COMMANDS: |
+            python -m pip install -U pip
+            pip install poetry
+            poetry update
+          COMMIT_MESSAGE: "chore: scheduled poetry update"
+          COMMIT_NAME: "GitHub Actions"
+          COMMIT_EMAIL: "noreply@github.com"
+          PR_BRANCH_PREFIX: deps/
+          PR_BRANCH_NAME: poetry-update
+          PR_TITLE: "chore: scheduled poetry update"
+          PR_BODY: |-
+            ## Update dependencies
+
+            This is a scheduled update of Python dependencies within this
+            repo managed by poetry.
+
+            This change will be approved automatically and merged within
+            a few days if all checks have succeeded.
+      - name: Look up pull request
+        uses: juliangruber/find-pull-request-action@v1
+        id: find-pull-request
+        with:
+          branch: deps/poetry-update
+      - run: echo "Pull Request ${number} (${sha})"
+        env:
+          number: ${{ steps.find-pull-request.outputs.number }}
+          sha: ${{ steps.find-pull-request.outputs.head-sha }}
+      - name: Approve Pull Request
+        uses: juliangruber/approve-pull-request-action@v1
+        with:
+          github-token: ${{ secrets.APPROVAL_TOKEN }}
+          number: ${{ steps.find-pull-request.outputs.number }}
