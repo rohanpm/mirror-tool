@@ -1,28 +1,16 @@
 import os
 import sys
 import textwrap
-from subprocess import check_call
 
 import pytest
 
 from mirror_tool.cmd import entrypoint
-from mirror_tool.git_config import environ_with_git_config
 
 
-@pytest.fixture
-def run_git():
-
-    env = environ_with_git_config(
-        {"user.name": "test", "user.email": "mirror-tool@example.com"}
-    )
-
-    def run(*args, **kwargs):
-        return check_call(["git"] + [str(a) for a in args], env=env, **kwargs)
-
-    return run
-
-
-def test_basic_update(tmpdir, monkeypatch, caplog, run_git):
+# If no target system is enabled, then update and update-local are just the
+# same thing, so test with both
+@pytest.mark.parametrize("subcommand", ["update", "update-local"])
+def test_basic_update_local(tmpdir, monkeypatch, caplog, run_git, subcommand):
     """mirror-tool can do basic local updates."""
 
     repo1 = tmpdir.join("repo1")
@@ -68,7 +56,7 @@ def test_basic_update(tmpdir, monkeypatch, caplog, run_git):
     # running from top level of superproject.
     monkeypatch.chdir(str(reposuper))
 
-    monkeypatch.setattr(sys, "argv", ["", "update-local", "--allow-empty"])
+    monkeypatch.setattr(sys, "argv", ["", subcommand, "--allow-empty"])
 
     # It should run OK
     entrypoint()
