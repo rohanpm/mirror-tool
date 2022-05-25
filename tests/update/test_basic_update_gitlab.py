@@ -1,7 +1,9 @@
+import datetime
 import sys
 import textwrap
 
 from mirror_tool.cmd import entrypoint
+from mirror_tool.git_info import Commit
 from mirror_tool.gitlab import GitlabSession
 
 
@@ -23,7 +25,7 @@ def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
 
     repo1.join("file1").write("1")
     run_git("add", "file1", cwd=str(repo1))
-    run_git("commit", "-m", "commit in repo1", cwd=str(repo1))
+    run_git("commit", "-m", "commit in repo1\nfoo\n\nand some\ndetails", cwd=str(repo1))
 
     repo2.join("file2").write("2")
     run_git("add", "file2", cwd=str(repo2))
@@ -79,3 +81,17 @@ def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
     assert updates[1].mirror.dir == "mirror2"
     assert len(updates[0].commits) == 1
     assert len(updates[1].commits) == 1
+
+    # Do a sanity check of one of the commit objects...
+    commit: Commit = updates[0].commits[0]
+    assert commit.revision_abbrev and commit.revision.startswith(commit.revision_abbrev)
+    assert commit.author_name == "test"
+    assert commit.author_email == "mirror-tool@example.com"
+    assert commit.author_email_local == "mirror-tool"
+    assert isinstance(commit.author_datetime, datetime.datetime)
+    assert commit.committer_name == "test"
+    assert commit.committer_email == "mirror-tool@example.com"
+    assert commit.committer_email_local == "mirror-tool"
+    assert isinstance(commit.committer_datetime, datetime.datetime)
+    assert commit.subject == "commit in repo1 foo"
+    assert commit.body == "and some\ndetails"
