@@ -24,6 +24,7 @@ jobs:
           COMMIT_MESSAGE: "chore: scheduled poetry update"
           COMMIT_NAME: "GitHub Actions"
           COMMIT_EMAIL: "noreply@github.com"
+          GITHUB_TOKEN: ${{ secrets.APPROVAL_TOKEN }}
           PR_BRANCH_PREFIX: deps/
           PR_BRANCH_NAME: poetry-update
           PR_TITLE: "chore: scheduled poetry update"
