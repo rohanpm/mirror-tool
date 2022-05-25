@@ -174,7 +174,7 @@ class MirrorTool:
             LOG.error(
                 "%s: configuration error\n  Path: %s\n  Object: %s\n  Cause: %s",
                 self.args.conf,
-                " ".join([str(p) for p in ex.absolute_path]),
+                ".".join([str(p) for p in ex.absolute_path]) or "<top level of config>",
                 ex.instance,
                 ex.message,
             )
