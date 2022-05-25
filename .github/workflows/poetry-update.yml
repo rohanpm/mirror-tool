@@ -36,17 +36,3 @@ jobs:
 
             This change will be approved automatically and merged within
             a few days if all checks have succeeded.
-      - name: Look up pull request
-        uses: juliangruber/find-pull-request-action@v1
-        id: find-pull-request
-        with:
-          branch: deps/poetry-update
-      - run: echo "Pull Request ${number} (${sha})"
-        env:
-          number: ${{ steps.find-pull-request.outputs.number }}
-          sha: ${{ steps.find-pull-request.outputs.head-sha }}
-      - name: Approve Pull Request
-        uses: juliangruber/approve-pull-request-action@v1
-        with:
-          github-token: ${{ secrets.APPROVAL_TOKEN }}
-          number: ${{ steps.find-pull-request.outputs.number }}
