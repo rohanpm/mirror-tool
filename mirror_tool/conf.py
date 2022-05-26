@@ -132,10 +132,6 @@ class GitlabMerge:
     def push_url_final(self) -> str:
         return self._token_auth(self.push_url)
 
-    @property
-    def api_v4_url_final(self) -> str:
-        return self._token_auth(self.api_v4_url)
-
     def _token_auth(self, url: str):
         if not url.startswith("https://"):
             # Not using token-based auth
