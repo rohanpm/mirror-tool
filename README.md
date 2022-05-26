@@ -86,6 +86,17 @@ git_config:
   user.name: "mirror-tool"
   user.email: "noreply@example.com"
 
+# Message for generated commits.
+# This is a Jinja template.
+commitmsg: |-
+  Merge {{commits[0].revision_abbrev}} to {{mirror.dir}}
+
+  {{commits|length}} commit(s) are being merged.
+
+  {% for commit in commits %}
+  - {{ commit.revision_abbrev }} {{ commit.subject }}
+  {%- endfor %}
+
 # Configures the GitLab merge request integration.
 gitlab_merge:
   # If enabled, the update command will create/update a GitLab
@@ -166,6 +177,42 @@ The following variables are available for use within the templates:
 
 * Current UTC year and week of year.
 * Example: `2022wk19` for week 19 of 2022.
+
+#### `updates` (list[UpdateInfo])
+
+In most Jinja contexts, this is a list of objects of the following form:
+
+```python
+UpdateInfo(
+  mirror=Mirror(
+    url="https://github.com/rohanpm/mirror-tool",
+    ref="refs/heads/main",
+    dir="mirror-tool"
+  ),
+  commits=[
+    Commit(
+      revision="472b7797518b963f8ab381c39858c18b2b784c2e",
+      revision_abbrev="472b779",
+      author_name="Rohan McGovern",
+      author_email="rohan@mcgovern.id.au",
+      author_email_local="rohan",
+      author_datetime=datetime.datetime(2022, 5, 26, 0, 24, 37),
+      committer_name="Rohan McGovern",
+      committer_email="rohan@mcgovern.id.au",
+      committer_email_local="rohan",
+      committer_datetime=datetime.datetime(2022, 5, 26, 0, 37, 37),
+      subject="Raise test coverage to 100%",
+      body="Do this, that and some other\nthings as well.",
+    ),
+    ...,
+  ],
+  commit_count=4,
+)
+```
+
+In the Jinja context for `commitmsg`, as only a single update is being processed,
+`updates` is not defined.  Instead, all of the fields shown above under `UpdateInfo`
+are directly included onto the context.
 
 ## License
 
