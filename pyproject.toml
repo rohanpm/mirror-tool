@@ -2,8 +2,11 @@
 name = "mirror-tool"
 version = "0.3.0"
 description = "A tool for managing git mirrors."
+readme = "README.md"
+homepage = "https://github.com/rohanpm/mirror-tool"
+repository = "https://github.com/rohanpm/mirror-tool"
 authors = ["Rohan McGovern <rohan@mcgovern.id.au>"]
-license = "GPLv3"
+license = "GPL-3.0-or-later"
 
 [tool.poetry.scripts]
 "mirror-tool" = "mirror_tool.cmd:entrypoint"
