@@ -162,9 +162,10 @@ class GitlabSession:
 
         mrs = response.json()
         for mr in mrs:
+            mr_url = mr.get("web_url") or "<unknown url>"
             LOG.info(
                 "Found existing merge request: %s",
-                mr.get("web_url") or "<unknown url>",
+                mr_url,
             )
 
             if SHARED_LABEL in (mr.get("labels") or []):
@@ -174,7 +175,7 @@ class GitlabSession:
             # branches but it apparently wasn't created by us?
             # That makes it not safe to proceed.
             raise GitlabException(
-                "An existing merge request was found, but it was apparently "
+                f"An existing merge request {mr_url} was found, but it was apparently "
                 "not created by mirror-tool! Refusing to update. Please close the MR manually "
                 "(if it is safe to do so), then re-run the tool."
             )
