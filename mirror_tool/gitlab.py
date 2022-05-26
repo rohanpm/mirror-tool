@@ -58,14 +58,15 @@ class GitlabSession:
             [self.api_v4_url, "/projects/", str(self.project_id), "/merge_requests"]
         )
 
-    def raise_bad_response(self, doing_what, response):
-        LOG.warning(
-            "Unexpected response from GitLab: %s %s",
-            response.status_code,
-            response.reason,
-        )
-        LOG.warning("Response body: %s", response.json())
-        raise GitlabException(f"Failed to {doing_what}")
+    def response_ok(self, doing_what, response):
+        if not response.ok:
+            LOG.warning(
+                "Unexpected response from GitLab: %s %s",
+                response.status_code,
+                response.reason,
+            )
+            LOG.warning("Response body: %s", response.json())
+            raise GitlabException(f"Failed to {doing_what}")
 
     def ensure_pushed_to_src(self, revision):
         try:
@@ -110,18 +111,16 @@ class GitlabSession:
 
         LOG.info("GitLab response: %s", response.status_code)
 
-        if response.ok:
-            body = response.json()
-            LOG.info(
-                "Created: %s", body.get("web_url") or "<unknown merge request URL>"
-            )
-            self.add_comment(body, self.jinja_render("comment.create"))
-            return True
-
-        elif response.status_code == 409:
+        if response.status_code == 409:
+            # This code is tolerated as meaning that an MR already exists.
             return False
 
-        self.raise_bad_response("create merge request", response)
+        self.response_ok("create merge request", response)
+
+        body = response.json()
+        LOG.info("Created: %s", body.get("web_url") or "<unknown merge request URL>")
+        self.add_comment(body, self.jinja_render("comment.create"))
+        return True
 
     def update_mr(self, mr) -> None:
         url = "".join([self.project_mrs_url, "/", str(mr["iid"])])
@@ -130,8 +129,7 @@ class GitlabSession:
 
         response = self.requests.put(url, json=update_attrs)
 
-        if not response.ok:
-            self.raise_bad_response("update merge request", response)
+        self.response_ok("update merge request", response)
 
         self.add_comment(mr, self.jinja_render("comment.update"))
 
@@ -146,8 +144,7 @@ class GitlabSession:
         url = "".join([self.project_mrs_url, "/", str(iid), "/notes"])
 
         response = self.requests.post(url, json=dict(body=body))
-        if not response.ok:
-            self.raise_bad_response("add comment", response)
+        self.response_ok("add comment", response)
 
         LOG.info("Commented on: %s", mr.get("web_url") or "<unknown merge request URL>")
 
@@ -161,8 +158,7 @@ class GitlabSession:
             },
         )
 
-        if not response.ok:
-            self.raise_bad_response("find merge request", response)
+        self.response_ok("find merge request", response)
 
         mrs = response.json()
         for mr in mrs:
