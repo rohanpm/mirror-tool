@@ -64,6 +64,8 @@ class Commit:
 
         for commit_log in commit_logs:
             lines = commit_log.decode("utf-8").splitlines()
+            if not lines:
+                continue
 
             kwargs = {}
 
