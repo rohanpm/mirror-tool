@@ -34,6 +34,10 @@ def test_push_fails(monkeypatch):
 
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_error, updates=[])
 
+    # In this test just simulate that the revision is not already present while
+    # avoiding having to run any git commands
+    monkeypatch.setattr(session, "revision_in_remote_branch", lambda *_: False)
+
     # It should raise when I ask it to create an MR
     with pytest.raises(GitlabException) as excinfo:
         session.ensure_merge_request_exists()
@@ -63,6 +67,10 @@ def test_request_fails(monkeypatch, requests_mocker: requests_mock.Mocker, caplo
     )
 
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
+
+    # In this test just simulate that the revision is not already present while
+    # avoiding having to run any git commands
+    monkeypatch.setattr(session, "revision_in_remote_branch", lambda *_: False)
 
     # It should raise when I ask it to create an MR
     with pytest.raises(GitlabException) as excinfo:

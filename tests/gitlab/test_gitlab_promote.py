@@ -90,7 +90,7 @@ def test_promote_already_present(
 
     # But not actually do anything
     assert (
-        "Revision a1b2c3 from merge request is already in some-dest, nothing to do"
+        "Revision a1b2c3 is already reachable from remote some-dest."
     ) in caplog.text
 
 

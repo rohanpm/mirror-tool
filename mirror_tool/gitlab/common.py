@@ -223,3 +223,39 @@ class GitlabSession:
         LOG.info("GitLab merge request seems to already exist, searching...")
         mr = self.find_single_mr(find_fields)
         update_fn(mr)
+
+    def revision_in_remote_branch(self, revision: str, branch: str) -> bool:
+        """Returns True if 'revision' appears to be reachable from remote 'branch'."""
+
+        # FIXME: below code is a bit lazy as it assumes that some remote exists
+        # in config with appropriate refspec to cover the src and dest branches.
+        # Maybe not guaranteed to be true in some cases.
+
+        # Do we have that revision locally?
+        if self.run_cmd(["git", "rev-parse", revision], check=False).returncode != 0:
+            # Try fetching then...
+            self.run_cmd(
+                ["git", "fetch", "--all"],
+            )
+
+        # Is that revision already reachable from target branch?
+        proc = self.run_cmd(
+            [
+                "git",
+                "branch",
+                "-r",
+                "--contains",
+                revision,
+                f"*/{branch}",
+            ],
+            capture_output=True,
+        )
+        if proc.stdout:
+            LOG.info(
+                "Revision %s is already reachable from remote %s.",
+                revision,
+                branch,
+            )
+            return True
+
+        return False
