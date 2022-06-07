@@ -111,7 +111,6 @@ class MirrorTool:
             ["git", "rev-parse", "refs/mirror-tool/to-merge"], text=True
         ).strip()
         update_info = get_update_info(rev_from="HEAD", rev_to=revision, mirror=mirror)
-        now = subprocess.check_output(["date", "-Im", "-u"], text=True)
 
         self.run_git_cmd(
             [
@@ -140,14 +139,13 @@ class MirrorTool:
             ]
         )
 
-        commitmsg = self.commitmsg_for_update(update_info)
-        commit_cmd = ["git", "commit", "-m", commitmsg]
-        if self.args.allow_empty:
-            commit_cmd.append("--allow-empty")
+        if update_info.changed or self.args.allow_empty:
+            commitmsg = self.commitmsg_for_update(update_info)
+            commit_cmd = ["git", "commit", "-m", commitmsg]
+            if self.args.allow_empty:
+                commit_cmd.append("--allow-empty")
 
-        # TODO: we tolerate failure here as meaning "there was nothing to change".
-        # But we should really verify that's the reason we failed.
-        self.run_git_cmd(commit_cmd, check=False)
+            self.run_git_cmd(commit_cmd)
 
         return update_info
 
