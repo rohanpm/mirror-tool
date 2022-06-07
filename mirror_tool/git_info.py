@@ -1,13 +1,14 @@
 import logging
-import re
+import os
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Generator, List, TextIO
+from datetime import datetime
+from typing import Generator, List
 
 from .conf import Mirror
 
 LOG = logging.getLogger("mirror-tool")
+COMMIT_LIMIT = int(os.getenv("MIRROR_TOOL_COMMIT_LIMIT") or "20")
 
 
 class GitParseError(RuntimeError):
@@ -98,11 +99,23 @@ class UpdateInfo:
     commit_count: int = 0
     """The number of commit(s) being pulled by the update."""
 
+    commit_elided_count: int = 0
+    """The number of commit(s) being pulled in, but omitted from UpdateInfo because
+    there were too many commits.
+
+    Equal to commit_count - len(commits).
+    """
+
     changed: bool = False
     """True if there were any changes at all."""
 
 
-def get_update_info(rev_to: str, mirror: Mirror, rev_from: str = "HEAD") -> UpdateInfo:
+def get_update_info(
+    rev_to: str,
+    mirror: Mirror,
+    rev_from: str = "HEAD",
+    commit_limit: int = COMMIT_LIMIT,
+) -> UpdateInfo:
     logs = subprocess.check_output(
         [
             "git",
@@ -116,8 +129,18 @@ def get_update_info(rev_to: str, mirror: Mirror, rev_from: str = "HEAD") -> Upda
 
     commits = list(Commit.from_log(logs))
     count = len(commits)
+    elided = 0
+
+    if len(commits) > commit_limit:
+        commits = commits[:commit_limit]
+        elided = count - len(commits)
+
     changed = True if count else False
 
     return UpdateInfo(
-        mirror=mirror, changed=changed, commit_count=count, commits=commits
+        mirror=mirror,
+        changed=changed,
+        commit_count=count,
+        commit_elided_count=elided,
+        commits=commits,
     )

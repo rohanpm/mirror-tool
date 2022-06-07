@@ -189,6 +189,12 @@ UpdateInfo(
     ref="refs/heads/main",
     dir="mirror-tool"
   ),
+
+  # Objects representing commits included in the update, starting
+  # with the most recent.
+  #
+  # If there is a large number of commits being handled, some may be
+  # elided from this list.
   commits=[
     Commit(
       revision="472b7797518b963f8ab381c39858c18b2b784c2e",
@@ -206,7 +212,15 @@ UpdateInfo(
     ),
     ...,
   ],
+
+  # Total number of commits in the update (may be more than len(commits)
+  # if some were elided).
   commit_count=4,
+
+  # Number of commits omitted from 'commits' object.
+  # For example, if an update pulled 200 commits, only the most recent 20
+  # may appear in 'commits', and this value will be set to 180.
+  commit_elided_count=0,
 )
 ```
 
