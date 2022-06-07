@@ -2,6 +2,8 @@
 
 A tool for maintaining Git subtree mirrors.
 
+![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/rohanpm/mirror-tool/CI/main) ![PyPI](https://img.shields.io/pypi/v/mirror-tool) [![Docker Repository on Quay](https://quay.io/repository/rmcgover/mirror-tool/status "Docker Repository on Quay")](https://quay.io/repository/rmcgover/mirror-tool)
+
 <!--TOC-->
 
 - [mirror-tool](#mirror-tool)
@@ -10,6 +12,7 @@ A tool for maintaining Git subtree mirrors.
     - [`mirror-tool validate-config`](#mirror-tool-validate-config)
     - [`mirror-tool update-local`](#mirror-tool-update-local)
     - [`mirror-tool update`](#mirror-tool-update)
+    - [`mirror-tool promote`](#mirror-tool-promote)
   - [Configuration](#configuration)
     - [Jinja context](#jinja-context)
   - [License](#license)
@@ -59,6 +62,25 @@ variables in the CI environment to determine how to connect to GitLab.
 If used in other contexts, it will be necessary to explicitly set many
 environment variables.
 
+### `mirror-tool promote`
+
+For any merge requests previously created by `update`, create additional
+merge request(s) to promote the same changes to other branch(es) as defined
+in config.
+
+This command can be used to implement a multi-tiered deployment/update workflow,
+for example:
+
+- Whenever mirrored repos change, create an MR updating them (via `mirror-tool update`), targeting `testing` branch.
+- Perform some pre- or post-merge testing on that MR by some means (outside the
+  scope of mirror-tool).
+- After the MR is submitted to `testing` branch, create a new MR promoting the
+  same changes to `stable` branch (via `mirror-tool promote`).
+
+The command only operates on changes previously created via
+`mirror-tool update`.
+
+Like `update`, GitLab is currently the only supported target for this command.
 
 ## Configuration
 
@@ -143,6 +165,19 @@ gitlab_merge:
   comment:
     create: "@some-team: please review and submit."
     update: "@some-team: merge request has been updated, please re-review."
+
+# Configures GitLab promotion between branches.
+# A list of (src, dest) branch pairs with other config.
+# Most config has the same meaning as in gitlab_merge.
+gitlab_promote:
+- src: stage
+  dest: prod
+  title: "Promote from stage to prod [{{datetime_day}}]"
+  token: $GITLAB_MIRROR_TOKEN
+  labels:
+  - promote
+  description: |-
+    Automated promotion of {{ src_mr.web_url }} to prod.
 ```
 
 ### Jinja context
@@ -178,9 +213,10 @@ The following variables are available for use within the templates:
 * Current UTC year and week of year.
 * Example: `2022wk19` for week 19 of 2022.
 
-#### `updates` (list[UpdateInfo])
+#### `updates` (list[UpdateInfo]) *(update only)*
 
-In most Jinja contexts, this is a list of objects of the following form:
+In most Jinja contexts for the `update` and `update-local` commands,
+this is a list of objects of the following form:
 
 ```python
 UpdateInfo(
@@ -227,6 +263,17 @@ UpdateInfo(
 In the Jinja context for `commitmsg`, as only a single update is being processed,
 `updates` is not defined.  Instead, all of the fields shown above under `UpdateInfo`
 are directly included onto the context.
+
+#### `src_mr` (dict) *(promote only)*
+
+A merge request object which is now being promoted; i.e. a merge request
+previously created by mirror-tool and submitted to one branch, and now
+being promoted by mirror-tool to another branch.
+
+The format of this object can be found in the
+[GitLab API docs](https://docs.gitlab.com/ee/api/merge_requests.html).
+
+Only available for the `promote` command.
 
 ## License
 

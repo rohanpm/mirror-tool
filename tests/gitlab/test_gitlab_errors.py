@@ -2,7 +2,7 @@ import pytest
 import requests_mock
 
 from mirror_tool.conf import GitlabMerge
-from mirror_tool.gitlab import GitlabException, GitlabSession
+from mirror_tool.gitlab import GitlabException, GitlabUpdateSession
 
 
 def test_missing_settings():
@@ -12,7 +12,7 @@ def test_missing_settings():
 
     # It should raise
     with pytest.raises(GitlabException) as excinfo:
-        GitlabSession(merge, run_cmd=lambda: (), updates=[])
+        GitlabUpdateSession(merge, run_cmd=lambda: (), updates=[])
 
     # It should tell me why
     assert "'api_v4_url' is not set" in str(excinfo.value)
@@ -32,7 +32,7 @@ def test_push_fails(monkeypatch):
     def run_cmd_error(*args, **kwargs):
         raise RuntimeError("simulating failure to run command...")
 
-    session = GitlabSession(merge, run_cmd=run_cmd_error, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_error, updates=[])
 
     # It should raise when I ask it to create an MR
     with pytest.raises(GitlabException) as excinfo:
@@ -62,7 +62,7 @@ def test_request_fails(monkeypatch, requests_mocker: requests_mock.Mocker, caplo
         json={"some": "response"},
     )
 
-    session = GitlabSession(merge, run_cmd=run_cmd_ok, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # It should raise when I ask it to create an MR
     with pytest.raises(GitlabException) as excinfo:

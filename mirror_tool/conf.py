@@ -72,6 +72,11 @@ CONFIG_SCHEMA = {
     "properties": {
         "mirror": {"$ref": "#/definitions/mirrorList"},
         "gitlab_merge": {"$ref": "#/definitions/gitlabMerge"},
+        "gitlab_promote": {
+            "type": "array",
+            # TODO: actually it's not 100% identical to gitlabMerge.
+            "items": {"$ref": "#/definitions/gitlabMerge"},
+        },
         "git_config": {"type": "object"},
         "commitmsg": {
             "type": "string",
@@ -91,8 +96,7 @@ class GitlabMergeComments:
 
 
 @dataclass
-class GitlabMerge:
-    enabled: bool = False
+class GitlabCommon:
     src: str = "latest"
     dest: str = ""
     title: str = "Update mirror"
@@ -145,6 +149,21 @@ class GitlabMerge:
 
 
 @dataclass
+class GitlabMerge(GitlabCommon):
+    enabled: bool = False
+
+
+@dataclass
+class GitlabPromote(GitlabCommon):
+    title: str = "Promote changes"
+    description: str = "Automated promotion between branches."
+
+    @property
+    def working_branch(self) -> str:
+        return f"mirror-tool/promote-{self.src}-to-{self.dest}"
+
+
+@dataclass
 class Mirror:
     url: str
     ref: str
@@ -161,6 +180,17 @@ class Config:
         raw_comment = raw.get("comment") or {}
         raw["comment"] = GitlabMergeComments(**raw_comment)
         return GitlabMerge(**raw)
+
+    @property
+    def gitlab_promote(self) -> List[GitlabPromote]:
+        out = []
+        raw = self._raw.get("gitlab_promote") or []
+        for elem in raw:
+            elem = elem.copy()
+            raw_comment = elem.get("comment") or {}
+            elem["comment"] = GitlabMergeComments(**raw_comment)
+            out.append(GitlabPromote(**elem))
+        return out
 
     @property
     def git_config(self) -> Dict[str, Any]:

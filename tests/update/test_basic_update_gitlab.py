@@ -4,7 +4,7 @@ import textwrap
 
 from mirror_tool.cmd import entrypoint
 from mirror_tool.git_info import Commit
-from mirror_tool.gitlab import GitlabSession
+from mirror_tool.gitlab import GitlabUpdateSession
 
 
 def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
@@ -69,7 +69,9 @@ def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
         updates.extend(self.updates)
 
     monkeypatch.setattr(
-        GitlabSession, "ensure_merge_request_exists", fake_ensure_merge_request_exists
+        GitlabUpdateSession,
+        "ensure_merge_request_exists",
+        fake_ensure_merge_request_exists,
     )
 
     # It should run OK
