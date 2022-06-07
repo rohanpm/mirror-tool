@@ -4,7 +4,7 @@ import pytest
 import requests_mock
 
 from mirror_tool.conf import GitlabMerge, GitlabMergeComments
-from mirror_tool.gitlab import GitlabException, GitlabSession
+from mirror_tool.gitlab import GitlabException, GitlabUpdateSession
 
 
 def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
@@ -30,7 +30,7 @@ def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     )
 
     caplog.set_level(logging.INFO)
-    session = GitlabSession(merge, run_cmd=run_cmd_ok, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # It should succeed
     session.ensure_merge_request_exists()
@@ -105,7 +105,7 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     )
 
     caplog.set_level(logging.INFO)
-    session = GitlabSession(merge, run_cmd=run_cmd_ok, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # It should succeed
     session.ensure_merge_request_exists()
@@ -165,7 +165,7 @@ def test_update_rejects_unknown(monkeypatch, requests_mocker: requests_mock.Mock
         ],
     )
 
-    session = GitlabSession(merge, run_cmd=run_cmd_ok, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # It should fail
     with pytest.raises(GitlabException) as excinfo:
@@ -209,7 +209,7 @@ def test_update_not_found(monkeypatch, requests_mocker: requests_mock.Mocker):
         json=[],
     )
 
-    session = GitlabSession(merge, run_cmd=run_cmd_ok, updates=[])
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # It should fail
     with pytest.raises(GitlabException) as excinfo:

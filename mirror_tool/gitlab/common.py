@@ -1,15 +1,16 @@
 import logging
-from typing import Any, Dict
+import subprocess
+from typing import Any, Callable, Dict, List, Tuple
 
 import jinja2
 import requests
 
-from .conf import GitlabMerge
-from .git_info import UpdateInfo
-from .jinja import jinja_args
+from ..conf import GitlabCommon
 
 LOG = logging.getLogger("mirror-tool")
 SHARED_LABEL = "mirror-tool"
+
+RunCmd = Callable[..., subprocess.CompletedProcess]
 
 
 class GitlabException(RuntimeError):
@@ -17,36 +18,35 @@ class GitlabException(RuntimeError):
 
 
 class GitlabSession:
-    def __init__(self, gitlab_merge: GitlabMerge, run_cmd, updates: list[UpdateInfo]):
+    def __init__(self, gitlab_info: GitlabCommon, run_cmd: RunCmd):
         for field in ("api_v4_url", "project_id", "push_url"):
-            if not getattr(gitlab_merge, field):
+            if not getattr(gitlab_info, field):
                 raise GitlabException(
                     (
-                        f"Cannot create GitLab MR: required config '{field}' is not set and "
+                        f"Cannot connect to GitLab: required config '{field}' is not set and "
                         "can't be determined automatically. Please run the tool within a GitLab pipeline "
                         "or set this field in the mirror-tool configuration file."
                     )
                 )
 
-        self.gitlab_merge = gitlab_merge
-        self.api_v4_url = gitlab_merge.api_v4_url
-        self.project_id = gitlab_merge.project_id
+        self.gitlab_info = gitlab_info
+        self.api_v4_url = gitlab_info.api_v4_url
+        self.project_id = gitlab_info.project_id
         self.requests = requests.Session()
-        self.requests.headers["PRIVATE-TOKEN"] = self.gitlab_merge.token_final
+        self.requests.headers["PRIVATE-TOKEN"] = gitlab_info.token_final
 
         self.run_cmd = run_cmd
 
         jinja_loader = jinja2.DictLoader(
             {
-                "title": self.gitlab_merge.title,
-                "description": self.gitlab_merge.description,
-                "comment.create": self.gitlab_merge.comment.create,
-                "comment.update": self.gitlab_merge.comment.update,
+                "title": self.gitlab_info.title,
+                "description": self.gitlab_info.description,
+                "comment.create": self.gitlab_info.comment.create,
+                "comment.update": self.gitlab_info.comment.update,
             }
         )
-        self.updates = updates
         self.jinja_env = jinja2.Environment(loader=jinja_loader)
-        self.jinja_args = jinja_args(updates=self.updates)
+        self.jinja_args = {}
 
     def jinja_render(self, template_name, *args, **kwargs):
         kwargs.update(self.jinja_args)
@@ -68,14 +68,14 @@ class GitlabSession:
             LOG.warning("Response body: %s", response.json())
             raise GitlabException(f"Failed to {doing_what}")
 
-    def ensure_pushed_to_src(self, revision):
+    def ensure_pushed_to(self, revision, dest):
         try:
             self.run_cmd(
                 [
                     "git",
                     "push",
-                    self.gitlab_merge.push_url_final,
-                    f"+{revision}:refs/heads/{self.gitlab_merge.src}",
+                    self.gitlab_info.push_url_final,
+                    f"+{revision}:refs/heads/{dest}",
                 ],
                 silent=True,
             )
@@ -85,24 +85,30 @@ class GitlabSession:
             # is going to contain the command by default. So we drop that and raise
             # our own more vague exception.
             LOG.debug("Command failed", exc_info=True)
-            raise GitlabException(f"Could not push to {self.gitlab_merge.src} branch.")
+            raise GitlabException(f"Could not push to {dest} branch.")
 
     def mutable_mr_attributes(self) -> Dict[str, Any]:
         return dict(
             title=self.jinja_render("title"),
             allow_collaboration=True,
             squash=False,
-            labels=[SHARED_LABEL] + self.gitlab_merge.labels,
+            labels=[SHARED_LABEL] + self.gitlab_info.labels,
             description=self.jinja_render("description"),
         )
 
-    def create_mr(self) -> bool:
+    def create_mr_with_branches(self, src, dest) -> bool:
+        """Make a merge request in the configured repo from 'src' to 'dest' branch.
+
+        Returns True if MR created, False if MR not created due to conflict, or
+        raises on error.
+        """
+
         # https://docs.gitlab.com/ee/api/merge_requests.html#create-mr
         LOG.info("Creating GitLab merge request ...")
 
         create_attrs = self.mutable_mr_attributes()
-        create_attrs["source_branch"] = self.gitlab_merge.src
-        create_attrs["target_branch"] = self.gitlab_merge.dest
+        create_attrs["source_branch"] = src
+        create_attrs["target_branch"] = dest
 
         response = self.requests.post(
             self.project_mrs_url,
@@ -148,28 +154,51 @@ class GitlabSession:
 
         LOG.info("Commented on: %s", mr.get("web_url") or "<unknown merge request URL>")
 
-    def find_mr(self) -> dict:
+    def find_mrs_with_fields(self, fields) -> Tuple[dict, dict]:
+        """Searches for MRs matching passed fields.
+
+        Returns a tuple of:
+
+          (list of matching MRs created by mirror-tool,
+           list of all matching MRs)
+        """
+
+        # Note: for the time being, lack of pagination here should be OK.
+        #
+        # - default sort will return newest MRs first.
+        # - default pagination is to return first page only.
+        #
+        # So, default behavior is to return ~20 most recent MRs only.
+        # It should be OK for the purpose of this tool.
         response = self.requests.get(
             self.project_mrs_url,
-            params={
-                "state": "opened",
-                "source_branch": self.gitlab_merge.src,
-                "target_branch": self.gitlab_merge.dest,
-            },
+            params=fields,
         )
 
         self.response_ok("find merge request", response)
 
         mrs = response.json()
+        out = []
         for mr in mrs:
+            if SHARED_LABEL in (mr.get("labels") or []):
+                out.append(mr)
+
+        return (out, mrs)
+
+    def find_single_mr(self, fields) -> dict:
+        (mrs_own, mrs_all) = self.find_mrs_with_fields(fields)
+
+        if mrs_own:
+            mr = mrs_own[0]
             mr_url = mr.get("web_url") or "<unknown url>"
             LOG.info(
                 "Found existing merge request: %s",
                 mr_url,
             )
+            return mr
 
-            if SHARED_LABEL in (mr.get("labels") or []):
-                return mr
+        if mrs_all:
+            mr_url = mrs_all[0].get("web_url") or "<unknown url>"
 
             # If we get here, that means we found an MR for the right
             # branches but it apparently wasn't created by us?
@@ -187,14 +216,10 @@ class GitlabSession:
             "but also failed to locate an existing MR!"
         )
 
-    def ensure_merge_request_exists(self, revision="HEAD"):
-        # First have to make sure it's pushed.
-        self.ensure_pushed_to_src(revision)
-
-        # Create if it didn't already exist.
-        if self.create_mr():
+    def create_or_update_mr(self, create_fn, update_fn, find_fields):
+        if create_fn():
             return
 
         LOG.info("GitLab merge request seems to already exist, searching...")
-        mr = self.find_mr()
-        self.update_mr(mr)
+        mr = self.find_single_mr(find_fields)
+        update_fn(mr)

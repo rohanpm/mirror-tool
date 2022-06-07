@@ -13,7 +13,7 @@ from jsonschema.exceptions import ValidationError
 from .conf import Config, Mirror
 from .git_config import environ_with_git_config
 from .git_info import UpdateInfo, get_update_info
-from .gitlab import GitlabSession
+from .gitlab import GitlabPromoteSession, GitlabUpdateSession
 from .jinja import jinja_args
 
 LOG = logging.getLogger("mirror-tool")
@@ -68,6 +68,12 @@ class MirrorTool:
                 ),
             )
 
+        promote = subparsers.add_parser(
+            "promote",
+            help=("promote formerly merged mirror-tool MRs to an additional branch"),
+        )
+        promote.set_defaults(func=self.promote)
+
         # TODO: a command to close outstanding PR if any.
         # TODO: a command to generate gitlab pipeline config?
 
@@ -79,10 +85,12 @@ class MirrorTool:
             self._config = Config.from_file(self.args.conf)
         return self._config
 
-    def run_cmd(self, args, check=True, silent=False, env=None):
+    def run_cmd(
+        self, args, check=True, silent=False, env=None, capture_output=None
+    ) -> subprocess.CompletedProcess:
         if not silent:
             LOG.info("+ %s" % " ".join(args))
-        subprocess.run(args, check=check, env=env)
+        return subprocess.run(args, check=check, env=env, capture_output=capture_output)
 
     def run_git_cmd(self, *args, **kwargs):
         kwargs["env"] = environ_with_git_config(self.config.git_config, os.environ)
@@ -159,13 +167,23 @@ class MirrorTool:
         updates = self.update_local()
 
         if not self.config.gitlab_merge.enabled:
-            LOG.info("No remote target(s) are enabled for update.")
+            LOG.info("No remote targets are enabled for update.")
             return
 
-        gitlab = GitlabSession(
+        gitlab = GitlabUpdateSession(
             self.config.gitlab_merge, run_cmd=self.run_cmd, updates=updates
         )
         gitlab.ensure_merge_request_exists()
+
+    def promote(self):
+        if not self.config.gitlab_promote:
+            LOG.info("No remote targets have any promotion rules.")
+            return
+
+        for promote in self.config.gitlab_promote:
+            LOG.info("Checking %s => %s promotion...", promote.src, promote.dest)
+            gitlab = GitlabPromoteSession(promote, run_cmd=self.run_cmd)
+            gitlab.ensure_promotion_merge_request_exists()
 
     def validate_config(self):
         try:
