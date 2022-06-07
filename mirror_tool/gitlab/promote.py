@@ -56,35 +56,7 @@ class GitlabPromoteSession(GitlabSession):
         revision = src_mr["merge_commit_sha"]
         LOG.debug("Should promote: %s", revision)
 
-        # FIXME: below code is a bit lazy as it assumes that some remote exists
-        # in config with appropriate refspec to cover the src and dest branches.
-        # Maybe not guaranteed to be true in some cases.
-
-        # Do we have that revision locally?
-        if self.run_cmd(["git", "rev-parse", revision], check=False).returncode != 0:
-            # Try fetching then...
-            self.run_cmd(
-                ["git", "fetch", "--all"],
-            )
-
-        # Is that revision already reachable from target branch?
-        proc = self.run_cmd(
-            [
-                "git",
-                "branch",
-                "-r",
-                "--contains",
-                revision,
-                f"*/{self.gitlab_promote.dest}",
-            ],
-            capture_output=True,
-        )
-        if proc.stdout:
-            LOG.info(
-                "Revision %s from merge request is already in %s, nothing to do.",
-                revision,
-                self.gitlab_promote.dest,
-            )
+        if self.revision_in_remote_branch(revision, self.gitlab_promote.dest):
             return
 
         self.ensure_pushed_to_workbranch(revision)

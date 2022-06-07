@@ -1,4 +1,5 @@
 import logging
+from subprocess import CompletedProcess
 
 import pytest
 import requests_mock
@@ -20,8 +21,10 @@ def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
         dest="some-dest",
     )
 
+    procs = []
+
     def run_cmd_ok(*args, **kwargs):
-        pass
+        return procs.pop(0)
 
     requests_mocker.post(
         "https://example.com/api/projects/123/merge_requests",
@@ -31,6 +34,16 @@ def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
 
     caplog.set_level(logging.INFO)
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
+
+    # Set up the commands we expect it to run...
+    # git rev-parse
+    procs.append(CompletedProcess([], returncode=0))
+
+    # branch contains
+    procs.append(CompletedProcess([], returncode=0, stdout=""))
+
+    # push
+    procs.append(CompletedProcess([], returncode=0))
 
     # It should succeed
     session.ensure_merge_request_exists()
@@ -67,8 +80,10 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
         ),
     )
 
+    procs = []
+
     def run_cmd_ok(*args, **kwargs):
-        pass
+        return procs.pop(0)
 
     # Initial request fails with conflict.
     requests_mocker.post(
@@ -106,6 +121,16 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
 
     caplog.set_level(logging.INFO)
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
+
+    # Set up the commands we expect it to run...
+    # git rev-parse
+    procs.append(CompletedProcess([], returncode=0))
+
+    # branch contains
+    procs.append(CompletedProcess([], returncode=0, stdout=""))
+
+    # push
+    procs.append(CompletedProcess([], returncode=0))
 
     # It should succeed
     session.ensure_merge_request_exists()
@@ -167,6 +192,9 @@ def test_update_rejects_unknown(monkeypatch, requests_mocker: requests_mock.Mock
 
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
+    # Make this check return False without having to mock the commands
+    monkeypatch.setattr(session, "revision_in_remote_branch", lambda *_: False)
+
     # It should fail
     with pytest.raises(GitlabException) as excinfo:
         session.ensure_merge_request_exists()
@@ -211,6 +239,9 @@ def test_update_not_found(monkeypatch, requests_mocker: requests_mock.Mocker):
 
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
+    # Make this check return False without having to mock the commands
+    monkeypatch.setattr(session, "revision_in_remote_branch", lambda *_: False)
+
     # It should fail
     with pytest.raises(GitlabException) as excinfo:
         session.ensure_merge_request_exists()
@@ -220,3 +251,32 @@ def test_update_not_found(monkeypatch, requests_mocker: requests_mock.Mocker):
         "Failed to create MR due to conflict, "
         "but also failed to locate an existing MR!"
     ) in str(excinfo.value)
+
+
+def test_update_noop_if_present(monkeypatch, requests_mocker: requests_mock.Mocker):
+    """Session does nothing if desired revision is already present in dest."""
+
+    monkeypatch.setenv("GITLAB_MIRROR_TOKEN", "abc123-not-a-real-token")
+
+    merge = GitlabMerge(
+        api_v4_url="https://example.com/api",
+        project_id=123,
+        push_url="https://example.com/push",
+        src="some-src",
+        dest="some-dest",
+    )
+
+    def run_cmd_error(*args, **kwargs):
+        # it's not expected to run any commands
+        raise RuntimeError("Should not get here!")
+
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_error, updates=[])
+
+    # Make this check return True without having to mock the commands
+    monkeypatch.setattr(session, "revision_in_remote_branch", lambda *_: True)
+
+    # It should succeed
+    session.ensure_merge_request_exists()
+
+    # Lack of any requests_mocker or run_cmd mocking proves we didn't actually
+    # do any commands or requests.

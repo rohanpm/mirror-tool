@@ -24,6 +24,9 @@ class GitlabUpdateSession(GitlabSession):
         )
 
     def ensure_merge_request_exists(self, revision="HEAD"):
+        if self.revision_in_remote_branch(revision, self.gitlab_merge.dest):
+            return
+
         # First have to make sure it's pushed.
         self.ensure_pushed_to_src(revision)
 
