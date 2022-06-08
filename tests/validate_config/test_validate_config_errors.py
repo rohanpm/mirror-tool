@@ -82,3 +82,33 @@ def test_deep_error(tmpdir, monkeypatch, caplog):
     # It should tell us exactly the wrong field
     assert "Path: gitlab_merge.token" in caplog.text
     assert "Object: GITLAB_MIRROR_TOKEN" in caplog.text
+
+
+def test_duplicate_mirror_dirs(tmpdir, monkeypatch, caplog):
+    """validate-config should fail if mirror dirs are not unique."""
+
+    monkeypatch.setattr(sys, "argv", ["", "validate-config"])
+    monkeypatch.chdir(str(tmpdir))
+    tmpdir.join(".mirror-tool.yaml").write(
+        textwrap.dedent(
+            """
+                mirror:
+                - url: ../foo
+                  ref: refs/heads/master
+                  dir: mydir
+                - url: ../bar
+                  ref: refs/heads/main
+                  dir: mydir
+            """
+        )
+    )
+
+    with pytest.raises(SystemExit) as excinfo:
+        entrypoint()
+
+    # It should exit with this non-zero code
+    assert excinfo.value.code == 80
+
+    # It should tell us exactly the wrong field
+    assert "Path: mirror" in caplog.text
+    assert "Multiple mirrors defined using same dir" in caplog.text
