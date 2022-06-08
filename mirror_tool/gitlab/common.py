@@ -68,24 +68,27 @@ class GitlabSession:
             LOG.warning("Response body: %s", response.json())
             raise GitlabException(f"Failed to {doing_what}")
 
-    def ensure_pushed_to(self, revision, dest):
+    def run_git_silent(self, cmd, doing_what):
         try:
-            self.run_cmd(
-                [
-                    "git",
-                    "push",
-                    self.gitlab_info.push_url_final,
-                    f"+{revision}:refs/heads/{dest}",
-                ],
-                silent=True,
-            )
+            self.run_cmd(cmd, silent=True)
         except Exception:
             # The unusual error handling here is because the push_url is
             # likely to contain a token which shouldn't be leaked, and the exception
             # is going to contain the command by default. So we drop that and raise
             # our own more vague exception.
             LOG.debug("Command failed", exc_info=True)
-            raise GitlabException(f"Could not push to {dest} branch.")
+            raise GitlabException(f"Could not {doing_what}.")
+
+    def ensure_pushed_to(self, revision, dest):
+        self.run_git_silent(
+            [
+                "git",
+                "push",
+                self.gitlab_info.push_url_final,
+                f"+{revision}:refs/heads/{dest}",
+            ],
+            f"push {revision} to {dest} branch",
+        )
 
     def mutable_mr_attributes(self) -> Dict[str, Any]:
         return dict(
@@ -227,30 +230,31 @@ class GitlabSession:
     def revision_in_remote_branch(self, revision: str, branch: str) -> bool:
         """Returns True if 'revision' appears to be reachable from remote 'branch'."""
 
-        # FIXME: below code is a bit lazy as it assumes that some remote exists
-        # in config with appropriate refspec to cover the src and dest branches.
-        # Maybe not guaranteed to be true in some cases.
-
-        # Do we have that revision locally?
-        if self.run_cmd(["git", "rev-parse", revision], check=False).returncode != 0:
-            # Try fetching then...
-            self.run_cmd(
-                ["git", "fetch", "--all"],
-            )
+        # Make sure we have latest version of that branch in a local ref...
+        self.run_git_silent(
+            [
+                "git",
+                "fetch",
+                self.gitlab_info.push_url_final,
+                f"+refs/heads/{branch}:refs/mirror-tool/dest-branch",
+            ],
+            f"fetch remote branch {branch}",
+        )
 
         # Is that revision already reachable from target branch?
+        # Note: this will also fail if 'revision' isn't even recognizable as a revision.
+        # But in that case we still know it's not in the dest branch, so returning
+        # False is reasonable.
         proc = self.run_cmd(
             [
                 "git",
-                "branch",
-                "-r",
-                "--contains",
+                "merge-base",
+                "--is-ancestor",
                 revision,
-                f"*/{branch}",
+                "refs/mirror-tool/dest-branch",
             ],
-            capture_output=True,
         )
-        if proc.stdout:
+        if proc.returncode == 0:
             LOG.info(
                 "Revision %s is already reachable from remote %s.",
                 revision,

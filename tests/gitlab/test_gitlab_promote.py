@@ -73,14 +73,11 @@ def test_promote_already_present(
         ],
     )
 
-    # rev-parse: make it fail (don't have commit)
-    cmd_outputs.append(CompletedProcess([], 2))
-
     # fetch: succeeds
     cmd_outputs.append(CompletedProcess([], 0))
 
-    # branch contains: this one we simulate that it finds a branch
-    cmd_outputs.append(CompletedProcess([], 0, stdout="origin/mydest"))
+    # merge-base is-ancestor: 0 means it is already in dest branch
+    cmd_outputs.append(CompletedProcess([], 0))
 
     caplog.set_level(logging.INFO)
     session = GitlabPromoteSession(promote, run_cmd=run_cmd_ok)
@@ -132,11 +129,11 @@ def test_promote_create_mr(monkeypatch, requests_mocker: requests_mock.Mocker, c
         json={"web_url": "https://example.com/new-mr"},
     )
 
-    # rev-parse: ok
+    # fetch: ok
     cmd_outputs.append(CompletedProcess([], 0))
 
-    # branch contains: ok & no match
-    cmd_outputs.append(CompletedProcess([], 0))
+    # merge-base is-ancestor: no it isn't
+    cmd_outputs.append(CompletedProcess([], 1))
 
     # git push: ok
     cmd_outputs.append(CompletedProcess([], 0))
