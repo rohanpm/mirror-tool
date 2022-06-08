@@ -253,6 +253,7 @@ class GitlabSession:
                 revision,
                 "refs/mirror-tool/dest-branch",
             ],
+            check=False,
         )
         if proc.returncode == 0:
             LOG.info(
