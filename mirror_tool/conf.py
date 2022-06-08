@@ -213,6 +213,14 @@ class Config:
     def validate(self) -> None:
         jsonschema.validate(self._raw, CONFIG_SCHEMA)
 
+        mirror_dirs = {mirror.dir for mirror in self.mirrors}
+        if len(mirror_dirs) != len(self.mirrors):
+            raise jsonschema.ValidationError(
+                message="Multiple mirrors defined using same dir",
+                path=["mirror"],
+                instance=self.mirrors,
+            )
+
     @classmethod
     def from_file(cls, filename=".mirror-tool.yaml") -> "Config":
         with open(filename, "rt") as f:
