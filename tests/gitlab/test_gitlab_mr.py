@@ -36,11 +36,11 @@ def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # Set up the commands we expect it to run...
-    # git rev-parse
+    # git fetch
     procs.append(CompletedProcess([], returncode=0))
 
-    # branch contains
-    procs.append(CompletedProcess([], returncode=0, stdout=""))
+    # merge-base is-ancestor (1 means is not ancestor)
+    procs.append(CompletedProcess([], returncode=1))
 
     # push
     procs.append(CompletedProcess([], returncode=0))
@@ -123,11 +123,11 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
 
     # Set up the commands we expect it to run...
-    # git rev-parse
+    # git fetch
     procs.append(CompletedProcess([], returncode=0))
 
-    # branch contains
-    procs.append(CompletedProcess([], returncode=0, stdout=""))
+    # merge-base is-ancestor (1 == 'is not ancestor')
+    procs.append(CompletedProcess([], returncode=1))
 
     # push
     procs.append(CompletedProcess([], returncode=0))
