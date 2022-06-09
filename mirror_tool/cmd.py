@@ -13,7 +13,11 @@ from jsonschema.exceptions import ValidationError
 from .conf import Config, Mirror
 from .git_config import environ_with_git_config
 from .git_info import UpdateInfo, get_update_info
-from .gitlab import GitlabPromoteSession, GitlabUpdateSession
+from .gitlab import (
+    GitlabPromoteSession,
+    GitlabUpdateSession,
+    render_ci_template_from_config,
+)
 from .jinja import jinja_args
 
 LOG = logging.getLogger("mirror-tool")
@@ -70,12 +74,17 @@ class MirrorTool:
 
         promote = subparsers.add_parser(
             "promote",
-            help=("promote formerly merged mirror-tool MRs to an additional branch"),
+            help=("Promote formerly merged mirror-tool MRs to an additional branch"),
         )
         promote.set_defaults(func=self.promote)
 
         # TODO: a command to close outstanding PR if any.
-        # TODO: a command to generate gitlab pipeline config?
+
+        gitlab_ci_yml = subparsers.add_parser(
+            "gitlab-ci-yml",
+            help=("Print a recommended GitLab CI configuration to stdout"),
+        )
+        gitlab_ci_yml.set_defaults(func=self.gitlab_ci_yml)
 
         return parser
 
@@ -182,6 +191,13 @@ class MirrorTool:
             LOG.info("Checking %s => %s promotion...", promote.src, promote.dest)
             gitlab = GitlabPromoteSession(promote, run_cmd=self.run_cmd)
             gitlab.ensure_promotion_merge_request_exists()
+
+    def gitlab_ci_yml(self):
+        if not self.config.gitlab_merge.enabled:
+            LOG.info("GitLab features are not enabled in config.")
+            return
+
+        print(render_ci_template_from_config(self.config))
 
     def validate_config(self):
         try:

@@ -13,6 +13,7 @@ A tool for maintaining Git subtree mirrors.
     - [`mirror-tool update-local`](#mirror-tool-update-local)
     - [`mirror-tool update`](#mirror-tool-update)
     - [`mirror-tool promote`](#mirror-tool-promote)
+    - [`mirror-tool gitlab-ci-yml`](#mirror-tool-gitlab-ci-yml)
   - [Configuration](#configuration)
     - [Jinja context](#jinja-context)
   - [License](#license)
@@ -81,6 +82,18 @@ The command only operates on changes previously created via
 `mirror-tool update`.
 
 Like `update`, GitLab is currently the only supported target for this command.
+
+### `mirror-tool gitlab-ci-yml`
+
+Generates a `.gitlab-ci.yml` snippet with a recommended configuration for integrating
+mirror-tool into a GitLab pipeline.
+
+It is recommended to put the generated config into its own YAML file and use the
+`include` keyword to include that file.
+
+The output of this command is influenced by the `.mirror-tool.yaml` config.
+When changing configuration elements relating to GitLab, it is a good idea to
+re-run this command.
 
 ## Configuration
 
