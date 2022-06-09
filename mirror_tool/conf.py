@@ -98,7 +98,7 @@ class GitlabMergeComments:
 @dataclass
 class GitlabCommon:
     src: str = "latest"
-    dest: str = ""
+    dest: str = "main"
     title: str = "Update mirror"
 
     # This MUST be '$ENV_VAR_NAME'
