@@ -61,13 +61,6 @@ class GitlabPromoteSession(GitlabSession):
 
         self.ensure_pushed_to_workbranch(revision)
 
-        # # Create promotion MR if it didn't already exist.
-        # if self.create_mr():
-        #     return
-
-        # LOG.info("GitLab promotion merge request seems to already exist, searching...")
-        # mr = self.find_promotion_mr()
-        # self.update_mr(mr)
         self.create_or_update_mr(
             create_fn=self.create_mr,
             update_fn=self.update_mr,
