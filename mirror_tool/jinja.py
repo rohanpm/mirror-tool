@@ -2,6 +2,8 @@ import datetime
 import os
 from typing import Any
 
+import jinja2
+
 
 def jinja_args(**kwargs) -> dict[str, Any]:
     now = datetime.datetime.utcnow()
@@ -14,3 +16,9 @@ def jinja_args(**kwargs) -> dict[str, Any]:
     )
     out.update(kwargs)
     return out
+
+
+def jinja_validate(template: str, **kwargs):
+    loader = jinja2.DictLoader({"template": template})
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    loader.load(env, "template").render(jinja_args(**kwargs))

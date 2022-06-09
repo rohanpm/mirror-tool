@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Generator, List
 
-from .conf import Mirror
+from .shared import Mirror
 
 LOG = logging.getLogger("mirror-tool")
 COMMIT_LIMIT = int(os.getenv("MIRROR_TOOL_COMMIT_LIMIT") or "20")
