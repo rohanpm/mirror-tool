@@ -258,6 +258,7 @@ UpdateInfo(
       committer_datetime=datetime.datetime(2022, 5, 26, 0, 37, 37),
       subject="Raise test coverage to 100%",
       body="Do this, that and some other\nthings as well.",
+      url="https://github.com/rohanpm/mirror-tool/commit/472b7797518b963f8ab381c39858c18b2b784c2e",
     ),
     ...,
   ],

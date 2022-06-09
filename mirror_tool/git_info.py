@@ -55,6 +55,13 @@ class Commit:
     body: str = ""
     """The body of the commit message."""
 
+    url: str = ""
+    """A URL at which this commit can possibly be accessed.
+
+    This value is guessed based on the Git hosting service which appears to be in use
+    for the mirrored repo. It might be wrong or missing in some cases.
+    """
+
     @classmethod
     def from_log(cls, log: bytes) -> Generator["Commit", None, None]:
         # Parse a git log into Commit objects.
@@ -110,6 +117,18 @@ class UpdateInfo:
     """True if there were any changes at all."""
 
 
+def add_urls(mirror: Mirror, commits: List[Commit]):
+    if not mirror.url.startswith("https://"):
+        return
+
+    if "github" in mirror.url:
+        for commit in commits:
+            commit.url = f"{mirror.url}/commit/{commit.revision}"
+    elif "gitlab" in mirror.url:
+        for commit in commits:
+            commit.url = f"{mirror.url}/-/commit/{commit.revision}"
+
+
 def get_update_info(
     rev_to: str,
     mirror: Mirror,
@@ -128,6 +147,7 @@ def get_update_info(
     )
 
     commits = list(Commit.from_log(logs))
+    add_urls(mirror, commits)
     count = len(commits)
     elided = 0
 
