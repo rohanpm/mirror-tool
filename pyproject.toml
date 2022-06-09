@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mirror-tool"
-version = "0.6.0"
+version = "0.7.0"
 description = "A tool for managing git mirrors."
 readme = "README.md"
 homepage = "https://github.com/rohanpm/mirror-tool"
