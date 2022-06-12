@@ -2,7 +2,7 @@
 
 A tool for maintaining Git subtree mirrors.
 
-![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/rohanpm/mirror-tool/CI/main) ![PyPI](https://img.shields.io/pypi/v/mirror-tool) [![Docker Repository on Quay](https://quay.io/repository/rmcgover/mirror-tool/status "Docker Repository on Quay")](https://quay.io/repository/rmcgover/mirror-tool)
+[![CI](https://github.com/rohanpm/mirror-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/rohanpm/mirror-tool/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mirror-tool)](https://pypi.org/pypi/mirror-tool) [![Docker Repository on Quay](https://quay.io/repository/rmcgover/mirror-tool/status "Docker Repository on Quay")](https://quay.io/repository/rmcgover/mirror-tool)
 
 <!--TOC-->
 
@@ -26,6 +26,20 @@ Install the `mirror-tool` package from PyPI.
 
 ```
 pip install mirror-tool
+```
+
+Alternatively, run `mirror-tool` directly as a container image.
+
+Note that you must expose the git repo you want to manage as a directory to the
+container as the current working directory, as well as setting any needed
+environment variables if GitLab features are enabled. The details of how to do
+this are beyond the scope of this README, but an example command may look like:
+
+```
+podman run \
+  -v $PWD:/workdir:Z -w /workdir \
+  quay.io/rmcgover/mirror-tool:latest \
+  update-local
 ```
 
 ## Usage
