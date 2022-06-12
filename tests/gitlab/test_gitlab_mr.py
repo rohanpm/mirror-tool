@@ -26,6 +26,12 @@ def test_create_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     def run_cmd_ok(*args, **kwargs):
         return procs.pop(0)
 
+    # No existing MR.
+    requests_mocker.get(
+        "https://example.com/api/projects/123/merge_requests?state=opened&source_branch=some-src&target_branch=some-dest",
+        json=[],
+    )
+
     requests_mocker.post(
         "https://example.com/api/projects/123/merge_requests",
         status_code=200,
@@ -83,6 +89,7 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     procs = []
 
     def run_cmd_ok(*args, **kwargs):
+        print(args)
         return procs.pop(0)
 
     # Initial request fails with conflict.
@@ -101,6 +108,7 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
                 "web_url": "https://example.com/existing-mr",
                 "labels": ["mirror-tool"],
                 "iid": 112233,
+                "sha": "aa112233",
             }
         ],
     )
@@ -129,6 +137,12 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     # merge-base is-ancestor (1 == 'is not ancestor')
     procs.append(CompletedProcess([], returncode=1))
 
+    # git fetch
+    procs.append(CompletedProcess([], returncode=0))
+
+    # git diff (1 == 'there are changes')
+    procs.append(CompletedProcess([], returncode=1))
+
     # push
     procs.append(CompletedProcess([], returncode=0))
 
@@ -152,6 +166,68 @@ def test_update_ok(monkeypatch, requests_mocker: requests_mock.Mocker, caplog):
     }
 
     assert comment_req.json() == {"body": "mr updated someval"}
+
+
+def test_update_skips_no_diff(
+    monkeypatch, requests_mocker: requests_mock.Mocker, caplog
+):
+    """GitlabSession can skip updating a merge request when there are no changes."""
+
+    monkeypatch.setenv("GITLAB_MIRROR_TOKEN", "abc123-not-a-real-token")
+    monkeypatch.setenv("SOMEVAR", "someval")
+
+    merge = GitlabMerge(
+        api_v4_url="https://example.com/api",
+        project_id=123,
+        push_url="https://example.com/push",
+        src="some-src",
+        dest="some-dest",
+        comment=GitlabMergeComments(
+            update="mr updated {{env.SOMEVAR}}",
+        ),
+    )
+
+    procs = []
+
+    def run_cmd_ok(*args, **kwargs):
+        print(args)
+        return procs.pop(0)
+
+    # It should try to find the existing MR.
+    requests_mocker.get(
+        "https://example.com/api/projects/123/merge_requests?state=opened&source_branch=some-src&target_branch=some-dest",
+        status_code=200,
+        json=[
+            {
+                "web_url": "https://example.com/existing-mr",
+                "labels": ["mirror-tool"],
+                "iid": 112233,
+                "sha": "aa112233",
+            }
+        ],
+    )
+
+    caplog.set_level(logging.INFO)
+    session = GitlabUpdateSession(merge, run_cmd=run_cmd_ok, updates=[])
+
+    # Set up the commands we expect it to run...
+    # git fetch
+    procs.append(CompletedProcess([], returncode=0))
+
+    # merge-base is-ancestor (1 == 'is not ancestor')
+    procs.append(CompletedProcess([], returncode=1))
+
+    # git fetch
+    procs.append(CompletedProcess([], returncode=0))
+
+    # git diff (0 == 'there are no changes')
+    procs.append(CompletedProcess([], returncode=0))
+
+    # It should succeed
+    session.ensure_merge_request_exists()
+
+    # It should tell us no update was needed
+    assert "https://example.com/existing-mr does not need an update" in caplog.text
 
 
 def test_update_rejects_unknown(monkeypatch, requests_mocker: requests_mock.Mocker):
