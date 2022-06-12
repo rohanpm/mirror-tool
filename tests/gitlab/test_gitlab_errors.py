@@ -18,7 +18,7 @@ def test_missing_settings():
     assert "'api_v4_url' is not set" in str(excinfo.value)
 
 
-def test_push_fails(monkeypatch):
+def test_push_fails(monkeypatch, requests_mocker: requests_mock.Mocker):
     """GitlabSession raises if git push command fails."""
 
     monkeypatch.setenv("GITLAB_MIRROR_TOKEN", "abc123-not-a-real-token")
@@ -31,6 +31,12 @@ def test_push_fails(monkeypatch):
 
     def run_cmd_error(*args, **kwargs):
         raise RuntimeError("simulating failure to run command...")
+
+    # It should check for existing MR, simulate none
+    requests_mocker.get(
+        "https://example.com//projects/123/merge_requests?state=opened&source_branch=latest&target_branch=main",
+        json=[],
+    )
 
     session = GitlabUpdateSession(merge, run_cmd=run_cmd_error, updates=[])
 
@@ -59,6 +65,11 @@ def test_request_fails(monkeypatch, requests_mocker: requests_mock.Mocker, caplo
 
     def run_cmd_ok(*args, **kwargs):
         pass
+
+    requests_mocker.get(
+        "https://example.com/api/projects/123/merge_requests?state=opened&source_branch=latest&target_branch=main",
+        json=[],
+    )
 
     requests_mocker.post(
         "https://example.com/api/projects/123/merge_requests",
