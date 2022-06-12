@@ -1,4 +1,5 @@
 import logging
+import pprint
 import subprocess
 from typing import Any, Callable, Dict, List, Tuple
 
@@ -18,7 +19,7 @@ class GitlabException(RuntimeError):
 
 
 class GitlabSession:
-    def __init__(self, gitlab_info: GitlabCommon, run_cmd: RunCmd):
+    def __init__(self, gitlab_info: GitlabCommon, run_cmd: RunCmd, dry_run: bool):
         for field in ("api_v4_url", "project_id", "push_url"):
             if not getattr(gitlab_info, field):
                 raise GitlabException(
@@ -36,6 +37,7 @@ class GitlabSession:
         self.requests.headers["PRIVATE-TOKEN"] = gitlab_info.token_final
 
         self.run_cmd = run_cmd
+        self.dry_run = dry_run
 
         jinja_loader = jinja2.DictLoader(
             {
@@ -80,6 +82,14 @@ class GitlabSession:
             raise GitlabException(f"Could not {doing_what}.")
 
     def ensure_pushed_to(self, revision, dest):
+        if self.dry_run:
+            LOG.info(
+                "DRY RUN: if not using --dry-run, would now push %s to %s",
+                revision,
+                dest,
+            )
+            return
+
         self.run_git_silent(
             [
                 "git",
@@ -107,11 +117,21 @@ class GitlabSession:
         """
 
         # https://docs.gitlab.com/ee/api/merge_requests.html#create-mr
-        LOG.info("Creating GitLab merge request ...")
 
         create_attrs = self.mutable_mr_attributes()
         create_attrs["source_branch"] = src
         create_attrs["target_branch"] = dest
+
+        if self.dry_run:
+            LOG.info(
+                "DRY RUN: if not using --dry-run, would now create MR from %s to %s",
+                src,
+                dest,
+            )
+            LOG.info("Merge request details:\n%s", pprint.pformat(create_attrs))
+            return True
+
+        LOG.info("Creating GitLab merge request ...")
 
         response = self.requests.post(
             self.project_mrs_url,
@@ -136,6 +156,11 @@ class GitlabSession:
 
         update_attrs = self.mutable_mr_attributes()
 
+        if self.dry_run:
+            LOG.info("DRY RUN: if not using --dry-run, would now update MR %s.", url)
+            LOG.info("Merge request details:\n%s", pprint.pformat(update_attrs))
+            return
+
         response = self.requests.put(url, json=update_attrs)
 
         self.response_ok("update merge request", response)
@@ -151,6 +176,11 @@ class GitlabSession:
         # https://docs.gitlab.com/ee/api/notes.html#create-new-merge-request-note
         iid = mr["iid"]
         url = "".join([self.project_mrs_url, "/", str(iid), "/notes"])
+
+        if self.dry_run:
+            LOG.info("DRY RUN: if not using --dry-run, would now add comment to MR.")
+            LOG.info("Comment body:\n%s", body)
+            return
 
         response = self.requests.post(url, json=dict(body=body))
         self.response_ok("add comment", response)

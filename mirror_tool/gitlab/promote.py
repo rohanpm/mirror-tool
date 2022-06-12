@@ -2,17 +2,18 @@ import logging
 
 from ..conf import GitlabPromote
 from ..jinja import jinja_args
-from .common import SHARED_LABEL, GitlabException, GitlabSession
+from .common import SHARED_LABEL, GitlabSession, RunCmd
 
 LOG = logging.getLogger("mirror-tool")
 
 
 class GitlabPromoteSession(GitlabSession):
-    def __init__(self, gitlab_promote: GitlabPromote, run_cmd):
-        super().__init__(gitlab_promote, run_cmd)
+    def __init__(
+        self, gitlab_promote: GitlabPromote, run_cmd: RunCmd, dry_run: bool = False
+    ):
+        super().__init__(gitlab_promote, run_cmd, dry_run)
         self.gitlab_promote = gitlab_promote
 
-        # TODO: can we put something useful in the jinja context?
         self.jinja_args = jinja_args(updates=[])
 
     def ensure_pushed_to_workbranch(self, revision):

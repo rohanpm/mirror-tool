@@ -3,14 +3,20 @@ import logging
 from ..conf import GitlabMerge
 from ..git_info import UpdateInfo
 from ..jinja import jinja_args
-from .common import GitlabException, GitlabSession
+from .common import GitlabSession
 
 LOG = logging.getLogger("mirror-tool")
 
 
 class GitlabUpdateSession(GitlabSession):
-    def __init__(self, gitlab_merge: GitlabMerge, run_cmd, updates: list[UpdateInfo]):
-        super().__init__(gitlab_merge, run_cmd)
+    def __init__(
+        self,
+        gitlab_merge: GitlabMerge,
+        run_cmd,
+        updates: list[UpdateInfo],
+        dry_run: bool = False,
+    ):
+        super().__init__(gitlab_merge, run_cmd, dry_run)
         self.gitlab_merge = gitlab_merge
         self.updates = updates
         self.jinja_args = jinja_args(updates=self.updates)

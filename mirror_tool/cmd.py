@@ -23,6 +23,15 @@ from .jinja import jinja_args
 LOG = logging.getLogger("mirror-tool")
 
 
+def add_dryrun(parser: argparse.ArgumentParser):
+    parser.add_argument(
+        "--dry-run",
+        default=False,
+        action="store_true",
+        help="Avoid making changes to remote systems, log what would be done",
+    )
+
+
 class MirrorTool:
     def __init__(self):
         self.args: Optional[argparse.Namespace] = None
@@ -59,6 +68,7 @@ class MirrorTool:
                 "push to enabled remote target(s)"
             ),
         )
+        add_dryrun(update)
         update.set_defaults(func=self.update)
 
         for p in (update_local, update):
@@ -76,6 +86,7 @@ class MirrorTool:
             "promote",
             help=("Promote formerly merged mirror-tool MRs to an additional branch"),
         )
+        add_dryrun(promote)
         promote.set_defaults(func=self.promote)
 
         # TODO: a command to close outstanding PR if any.
@@ -178,7 +189,10 @@ class MirrorTool:
             return
 
         gitlab = GitlabUpdateSession(
-            self.config.gitlab_merge, run_cmd=self.run_cmd, updates=updates
+            self.config.gitlab_merge,
+            run_cmd=self.run_cmd,
+            updates=updates,
+            dry_run=self.args.dry_run,
         )
         gitlab.ensure_merge_request_exists()
 
@@ -189,7 +203,9 @@ class MirrorTool:
 
         for promote in self.config.gitlab_promote:
             LOG.info("Checking %s => %s promotion...", promote.src, promote.dest)
-            gitlab = GitlabPromoteSession(promote, run_cmd=self.run_cmd)
+            gitlab = GitlabPromoteSession(
+                promote, run_cmd=self.run_cmd, dry_run=self.args.dry_run
+            )
             gitlab.ensure_promotion_merge_request_exists()
 
     def gitlab_ci_yml(self):
