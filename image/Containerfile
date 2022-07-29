@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora-minimal@sha256:0ddce246625479dcf8ea8404e6e5342c27e35f6af579428fc59336a4bea67afe
+FROM registry.fedoraproject.org/fedora-minimal@sha256:b676cdd0fdefe33124325082d070c39558f1966a63dfd1193681a7900707d332
 
 RUN microdnf -y upgrade
 RUN microdnf -y install python git-core /usr/bin/pip /usr/bin/poetry
