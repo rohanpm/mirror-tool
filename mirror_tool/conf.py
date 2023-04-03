@@ -393,7 +393,7 @@ class Config:
             base_path = ["gitlab_promote", i]
             append_gitlab_common(base_path, elem, src_mr=VALIDATE_MERGEREQUEST)
 
-        for (path, template, kwargs) in jinja_templates:
+        for path, template, kwargs in jinja_templates:
             self.jinja_validate(template, path, **kwargs)
 
     def jinja_validate(self, template, path, **kwargs):
