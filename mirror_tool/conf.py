@@ -111,7 +111,7 @@ class GitlabCommon:
 
     labels: List[str] = field(default_factory=list)
     description: str = "Automated update of dependencies."
-    comment: GitlabMergeComments = GitlabMergeComments()
+    comment: GitlabMergeComments = field(default_factory=GitlabMergeComments)
 
     # The defaults here assume that we are running from a gitlab CI pipeline.
     # Predefined vars are documented at:
