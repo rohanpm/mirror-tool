@@ -12,11 +12,51 @@ jobs:
     uses: ./.github/workflows/test-image.yml
 
   pypi-publish:
+    # This cannot use shared workflow until:
+    # https://github.com/pypi/warehouse/issues/11096
+    # uses: rohanpm/workflows/.github/workflows/pypi-release.yml@main
+    # with:
+    #   name: mirror-tool
+
     needs:
       - tox
       - test-image
     permissions:
       id-token: write
-    uses: rohanpm/workflows/.github/workflows/pypi-release.yml@main
-    with:
-      name: mirror-tool
+    runs-on: ubuntu-22.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mirror-tool
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -U pip
+          pip install build
+
+      - name: Build distribution
+        run: |
+          python -mbuild
+
+      - name: Prepare for wheel check
+        run: |
+          pip download --no-deps --only-binary :all: --implementation py --platform none mirror-tool
+          pip install wheeldiff
+
+      - name: Check if wheel content changed
+        id: wheeldiff
+        run: |
+          set +e
+          set -x
+          wheeldiff --ignore version,record *.whl dist/*.whl
+          echo "diff=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        if: steps.wheeldiff.outputs.diff == '2'
