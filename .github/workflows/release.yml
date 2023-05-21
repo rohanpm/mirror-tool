@@ -1,0 +1,22 @@
+name: Release to PyPI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  tox:
+    uses: ./.github/workflows/tox.yml
+  test-image:
+    uses: ./.github/workflows/test-image.yml
+
+  pypi-publish:
+    needs:
+      - tox
+      - test-image
+    permissions:
+      id-token: write
+    uses: rohanpm/workflows/.github/workflows/pypi-release.yml@main
+    with:
+      name: mirror-tool

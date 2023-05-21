@@ -1,0 +1,11 @@
+name: tox
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  pull_request:
+    branches: [main]
+
+jobs:
+  tox:
+    uses: rohanpm/workflows/.github/workflows/tox.yml@main

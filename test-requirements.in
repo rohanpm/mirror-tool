@@ -1,0 +1,4 @@
+-rrequirements.in
+pytest>=7.1.1
+pytest-cov>=3.0.0
+requests-mock>=1.9.3
