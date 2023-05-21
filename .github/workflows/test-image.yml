@@ -1,0 +1,18 @@
+name: Test image
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-image:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Test image
+        run: |
+          set -xe
+          docker build . -t mirror-tool -f image/Containerfile
+          docker run mirror-tool --help

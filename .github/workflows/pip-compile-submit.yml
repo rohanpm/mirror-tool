@@ -1,0 +1,9 @@
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "20 11 * * 2"
+
+name: "pip-compile: submit PR"
+jobs:
+  pip-compile-submit:
+    uses: rohanpm/workflows/.github/workflows/pip-compile-submit.yml@main

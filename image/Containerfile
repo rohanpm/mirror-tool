@@ -1,14 +1,13 @@
 FROM registry.fedoraproject.org/fedora-minimal@sha256:74786335d9b451a73c1f45ac55ecfff62ba1e5d66f01b45756987075930cf0b1
 
 RUN microdnf -y upgrade
-RUN microdnf -y install python git-core /usr/bin/pip /usr/bin/poetry
+RUN microdnf -y install python git-core /usr/bin/pip
 
 ADD . /src
 
-RUN mv /src/image/RH-IT-Root-CA.crt /etc/pki/ca-trust/source/anchors && update-ca-trust
+RUN mv -v /src/image/*.crt /etc/pki/ca-trust/source/anchors && update-ca-trust
 ENV REQUESTS_CA_BUNDLE=/etc/pki/tls/certs/ca-bundle.crt
 
-RUN cd /src && poetry install --no-dev -n
+RUN cd /src && pip install -rtest-requirements-3.11.txt && pip install .
 
-RUN ln -s /root/.cache/pypoetry/virtualenvs/mirror-tool*/bin/mirror-tool /usr/local/bin/mirror-tool
 ENTRYPOINT ["/usr/local/bin/mirror-tool"]
