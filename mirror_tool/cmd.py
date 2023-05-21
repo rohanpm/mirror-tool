@@ -81,6 +81,12 @@ class MirrorTool:
                     "updates; primarily for testing purposes"
                 ),
             )
+            p.add_argument(
+                "--skip",
+                action="append",
+                default=[],
+                help="Skip update of these mirror dirs (comma-separated)",
+            )
 
         promote = subparsers.add_parser(
             "promote",
@@ -104,6 +110,13 @@ class MirrorTool:
         if not self._config:
             self._config = Config.from_file(self.args.conf)
         return self._config
+
+    @property
+    def skip(self) -> list[str]:
+        out: list[str] = []
+        for arg in getattr(self.args, "skip", []):
+            out.extend(arg.split(","))
+        return out
 
     def run_cmd(
         self, args, check=True, silent=False, env=None, capture_output=None
@@ -175,6 +188,9 @@ class MirrorTool:
         updates = []
 
         for mirror in cfg.mirrors:
+            if mirror.dir in self.skip:
+                LOG.info("Skipping update of %s", mirror.dir)
+                continue
             updates.append(self.update_local_mirror(mirror))
 
         LOG.info("Mirror(s) locally updated.")
