@@ -2,7 +2,7 @@
 
 A tool for maintaining Git subtree mirrors.
 
-[![CI](https://github.com/rohanpm/mirror-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/rohanpm/mirror-tool/actions/workflows/ci.yml) [![PyPI](https://img.shields.io/pypi/v/mirror-tool)](https://pypi.org/pypi/mirror-tool) [![Docker Repository on Quay](https://quay.io/repository/rmcgover/mirror-tool/status "Docker Repository on Quay")](https://quay.io/repository/rmcgover/mirror-tool)
+[![PyPI](https://img.shields.io/pypi/v/mirror-tool)](https://pypi.org/pypi/mirror-tool) [![Docker Repository on Quay](https://quay.io/repository/rmcgover/mirror-tool/status "Docker Repository on Quay")](https://quay.io/repository/rmcgover/mirror-tool)
 
 <!--TOC-->
 
