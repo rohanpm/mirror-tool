@@ -1,4 +1,4 @@
-FROM registry.fedoraproject.org/fedora-minimal@sha256:65cac20979bc472b5f96c1d1bef190f5d237919c9a84f7dc85dcd51d107ba0cc
+FROM registry.fedoraproject.org/fedora-minimal@sha256:a6f54703edc316885410e686f883ebbd8760bbeeef02d0e26e06ed5f686438f8
 
 RUN microdnf -y upgrade
 RUN microdnf -y install python git-core /usr/bin/pip
