@@ -1,7 +1,7 @@
 repos:
 
 -   repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 23.9.1
     hooks:
     - id: black
 
@@ -11,7 +11,7 @@ repos:
     - id: isort
 
 -   repo: https://github.com/frnmst/md-toc
-    rev: 8.1.9
+    rev: 8.2.0
     hooks:
     - id: md-toc
 
