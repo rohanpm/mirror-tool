@@ -1,7 +1,7 @@
 FROM registry.fedoraproject.org/fedora-minimal@sha256:0f8408100c4e570f0fa724a75adb729d1103aa77b924e5827316efd90da615b2
 
 RUN microdnf -y upgrade
-RUN microdnf -y install python git-core /usr/bin/pip
+RUN microdnf -y install python gcc python3-devel git-core /usr/bin/pip
 
 ADD . /src
 
