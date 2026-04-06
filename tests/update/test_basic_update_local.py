@@ -30,9 +30,7 @@ def test_basic_update_local(tmpdir, monkeypatch, caplog, run_git, subcommand):
     run_git("add", "file2", cwd=str(repo2))
     run_git("commit", "-m", "commit in repo2", cwd=str(repo2))
 
-    reposuper.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            f"""
+    reposuper.join(".mirror-tool.yaml").write(textwrap.dedent(f"""
             mirror:
             - url: ../repo1
               ref: refs/heads/main
@@ -43,9 +41,7 @@ def test_basic_update_local(tmpdir, monkeypatch, caplog, run_git, subcommand):
             git_config:
               user.name: test
               user.email: tester@example.com
-            """
-        )
-    )
+            """))
     run_git("add", ".mirror-tool.yaml", cwd=str(reposuper))
     run_git("commit", "-m", "add config", cwd=str(reposuper))
 
