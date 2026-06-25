@@ -26,7 +26,7 @@ class GitlabPromoteSession(GitlabSession):
 
     def find_merged_mr(self) -> dict:
         LOG.info("Looking for previous MRs to %s...", self.gitlab_promote.src)
-        (mrs_own, _) = self.find_mrs_with_fields(
+        mrs_own, _ = self.find_mrs_with_fields(
             {
                 "target_branch": self.gitlab_promote.src,
                 "labels": SHARED_LABEL,

@@ -37,9 +37,7 @@ def test_update_with_skip(tmpdir, monkeypatch, caplog, run_git):
     run_git("add", "file4", cwd=str(repo4))
     run_git("commit", "-m", "commit in repo4", cwd=str(repo4))
 
-    reposuper.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            f"""
+    reposuper.join(".mirror-tool.yaml").write(textwrap.dedent(f"""
             mirror:
             - url: ../repo1
               ref: refs/heads/main
@@ -56,9 +54,7 @@ def test_update_with_skip(tmpdir, monkeypatch, caplog, run_git):
             git_config:
               user.name: test
               user.email: tester@example.com
-            """
-        )
-    )
+            """))
     run_git("add", ".mirror-tool.yaml", cwd=str(reposuper))
     run_git("commit", "-m", "add config", cwd=str(reposuper))
 
