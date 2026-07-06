@@ -16,6 +16,13 @@ A tool for maintaining Git subtree mirrors.
     - [`mirror-tool gitlab-ci-yml`](#mirror-tool-gitlab-ci-yml)
   - [Configuration](#configuration)
     - [Jinja context](#jinja-context)
+      - [`env` (dict)](#env-dict)
+      - [`datetime_iso8601` (str)](#datetime_iso8601-str)
+      - [`datetime_minute` (str)](#datetime_minute-str)
+      - [`datetime_day` (str)](#datetime_day-str)
+      - [`datetime_week` (str)](#datetime_week-str)
+      - [`updates` (list\[UpdateInfo\]) *(update only)*](#updates-listupdateinfo-update-only)
+      - [`src_mr` (dict) *(promote only)*](#src_mr-dict-promote-only)
   - [License](#license)
 
 <!--TOC-->

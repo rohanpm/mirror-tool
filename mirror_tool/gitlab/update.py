@@ -77,7 +77,7 @@ class GitlabUpdateSession(GitlabSession):
             "source_branch": self.gitlab_merge.src,
             "target_branch": self.gitlab_merge.dest,
         }
-        (ours, _) = self.find_mrs_with_fields(find_fields)
+        ours, _ = self.find_mrs_with_fields(find_fields)
         if ours and self.is_mr_uptodate(ours[0], revision):
             # Don't need to do anything.
             return

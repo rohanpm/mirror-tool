@@ -219,7 +219,7 @@ class GitlabSession:
         return (out, mrs)
 
     def find_single_mr(self, fields) -> dict:
-        (mrs_own, mrs_all) = self.find_mrs_with_fields(fields)
+        mrs_own, mrs_all = self.find_mrs_with_fields(fields)
 
         if mrs_own:
             mr = mrs_own[0]

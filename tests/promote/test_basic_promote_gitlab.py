@@ -8,18 +8,14 @@ from mirror_tool.gitlab import GitlabPromoteSession
 def test_basic_promote_gitlab(tmpdir, monkeypatch):
     """mirror-tool can do a basic gitlab promote operation."""
 
-    tmpdir.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            f"""
+    tmpdir.join(".mirror-tool.yaml").write(textwrap.dedent(f"""
             mirror: []
             gitlab_promote:
             - src: mysrc
               dest: mydest
             - src: mysrc2
               dest: mydest2
-            """
-        )
-    )
+            """))
 
     monkeypatch.chdir(str(tmpdir))
 
@@ -56,13 +52,9 @@ def test_basic_promote_gitlab(tmpdir, monkeypatch):
 def test_promote_nothing(tmpdir, monkeypatch, caplog):
     """mirror-tool successfully does nothing if no promotion configured."""
 
-    tmpdir.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            f"""
+    tmpdir.join(".mirror-tool.yaml").write(textwrap.dedent(f"""
             mirror: []
-            """
-        )
-    )
+            """))
 
     monkeypatch.chdir(str(tmpdir))
 
