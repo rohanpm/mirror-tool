@@ -31,9 +31,7 @@ def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
     run_git("add", "file2", cwd=str(repo2))
     run_git("commit", "-m", "commit in repo2", cwd=str(repo2))
 
-    reposuper.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            f"""
+    reposuper.join(".mirror-tool.yaml").write(textwrap.dedent(f"""
             mirror:
             - url: ../repo1
               ref: refs/heads/main
@@ -46,9 +44,7 @@ def test_basic_update_gitlab(tmpdir, monkeypatch, caplog, run_git):
               user.email: tester@example.com
             gitlab_merge:
               enabled: true
-            """
-        )
-    )
+            """))
     run_git("add", ".mirror-tool.yaml", cwd=str(reposuper))
     run_git("commit", "-m", "add config", cwd=str(reposuper))
 

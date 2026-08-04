@@ -37,9 +37,7 @@ def test_deep_error(tmpdir, monkeypatch, caplog):
     monkeypatch.setattr(sys, "argv", ["", "validate-config"])
     monkeypatch.chdir(str(tmpdir))
 
-    tmpdir.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            """
+    tmpdir.join(".mirror-tool.yaml").write(textwrap.dedent("""
 
             mirror:
             - url: https://example.com/some/repo
@@ -70,9 +68,7 @@ def test_deep_error(tmpdir, monkeypatch, caplog):
             git_config:
                 user.name: "mirror-tool"
                 user.email: "noreply@example.com"
-            """
-        )
-    )
+            """))
     with pytest.raises(SystemExit) as excinfo:
         entrypoint()
 
@@ -89,9 +85,7 @@ def test_duplicate_mirror_dirs(tmpdir, monkeypatch, caplog):
 
     monkeypatch.setattr(sys, "argv", ["", "validate-config"])
     monkeypatch.chdir(str(tmpdir))
-    tmpdir.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            """
+    tmpdir.join(".mirror-tool.yaml").write(textwrap.dedent("""
                 mirror:
                 - url: ../foo
                   ref: refs/heads/master
@@ -99,9 +93,7 @@ def test_duplicate_mirror_dirs(tmpdir, monkeypatch, caplog):
                 - url: ../bar
                   ref: refs/heads/main
                   dir: mydir
-            """
-        )
-    )
+            """))
 
     with pytest.raises(SystemExit) as excinfo:
         entrypoint()
