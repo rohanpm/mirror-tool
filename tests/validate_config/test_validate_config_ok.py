@@ -18,9 +18,7 @@ def test_valid_typical_config(tmpdir, monkeypatch):
     """
     monkeypatch.setattr(sys, "argv", ["", "validate-config"])
     monkeypatch.chdir(str(tmpdir))
-    tmpdir.join(".mirror-tool.yaml").write(
-        textwrap.dedent(
-            """
+    tmpdir.join(".mirror-tool.yaml").write(textwrap.dedent("""
 
             mirror:
             - url: https://example.com/some/repo
@@ -50,7 +48,5 @@ def test_valid_typical_config(tmpdir, monkeypatch):
             git_config:
                 user.name: "mirror-tool"
                 user.email: "noreply@example.com"
-            """
-        )
-    )
+            """))
     entrypoint()
